@@ -4,6 +4,7 @@ from google_auth_oauthlib.flow import Flow
 from app.config import Settings
 import os
 from app.dependencies import get_settings
+import json
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -46,7 +47,7 @@ async def oauth2callback(request: Request, settings: Settings = Depends(get_sett
         flow.fetch_token(authorization_response=authorization_response)
         credentials = flow.credentials
         
-        request.session["credentials"] = {
+        credentials_dict = {
             'token': credentials.token,
             'refresh_token': credentials.refresh_token,
             'token_uri': credentials.token_uri,
@@ -54,6 +55,13 @@ async def oauth2callback(request: Request, settings: Settings = Depends(get_sett
             'client_secret': credentials.client_secret,
             'scopes': credentials.scopes
         }
+        
+        # Store in session
+        request.session["credentials"] = credentials_dict
+        
+        # Store in file
+        with open('token.json', 'w') as token_file:
+            json.dump(credentials_dict, token_file)
         
         return RedirectResponse(url="/")
     except Exception as e:

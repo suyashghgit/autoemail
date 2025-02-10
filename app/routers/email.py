@@ -14,7 +14,6 @@ async def send_email(
     try:
         gmail_service = GmailService(credentials)
         message = gmail_service.create_message(
-            sender=email.sender,
             to=email.recipient,
             subject=email.subject,
             message_text=email.body
