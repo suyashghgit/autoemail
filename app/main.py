@@ -5,6 +5,7 @@ from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 import uvicorn
 from app.config import settings
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
@@ -12,6 +13,15 @@ app = FastAPI()
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.CLIENT_SECRET  # Using CLIENT_SECRET as session key
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Include routers
