@@ -27,10 +27,21 @@ async def send_email(
             signature = ""
             disclaimer = ""
         
-        # Combine message body with signature and disclaimer in HTML format
+        # Get absolute path to logo file
+        logo_path = os.path.abspath(os.path.join("app", "templates", "logo.png"))
+        print(f"Logo path: {logo_path}")  # Debug print
+        
+        if not os.path.exists(logo_path):
+            print(f"Logo file not found at: {logo_path}")  # Debug print
+            raise FileNotFoundError(f"Logo file not found at: {logo_path}")
+        
+        # Combine message body with logo, signature and disclaimer in HTML format
         full_message = f"""
         <html>
             <body>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                </div>
                 {email.body}
                 {signature}
                 <div style="color: #666; font-size: 12px; margin-top: 20px;">
@@ -44,10 +55,17 @@ async def send_email(
         message = gmail_service.create_message(
             to=email.recipient,
             subject=email.subject,
-            message_text=full_message
+            message_text=full_message,
+            image_path=logo_path  # Using absolute path
         )
         result = gmail_service.send_message(message)
         return {"message": "Email sent successfully", "message_id": result.get("id")}
+    except FileNotFoundError as e:
+        print(f"File error: {str(e)}")
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
     except Exception as e:
         print(f"Error sending email: {str(e)}")
         raise HTTPException(
