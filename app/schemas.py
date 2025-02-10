@@ -8,8 +8,8 @@ class EmailSchema(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "recipient": "recipient@example.com",
-                "subject": "Test Email",
-                "body": "This is a test email sent using Gmail API"
+                "recipient": "example@email.com",
+                "subject": "Important Information About Your Company",
+                "body": "Your email content here..."
             }
         } 
