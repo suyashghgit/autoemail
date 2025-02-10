@@ -22,18 +22,23 @@ async def send_email(
         try:
             signature = get_template("signature")
             disclaimer = get_template("disclaimer")
-            print(f"Disclaimer length: {len(disclaimer)}")  # Debug print
         except FileNotFoundError as e:
-            print(f"Template error: {str(e)}")  # Debug print
+            print(f"Template error: {str(e)}")
             signature = ""
             disclaimer = ""
         
-        # Combine message body with signature and disclaimer
-        full_message = (
-            f"{email.body}\n\n"  # Add double line break after body
-            f"{signature}\n\n"    # Add double line break after signature
-            f"{disclaimer}"       # Disclaimer at the end
-        )
+        # Combine message body with signature and disclaimer in HTML format
+        full_message = f"""
+        <html>
+            <body>
+                {email.body}
+                {signature}
+                <div style="color: #666; font-size: 12px; margin-top: 20px;">
+                    {disclaimer}
+                </div>
+            </body>
+        </html>
+        """
         
         gmail_service = GmailService(credentials)
         message = gmail_service.create_message(
@@ -44,7 +49,7 @@ async def send_email(
         result = gmail_service.send_message(message)
         return {"message": "Email sent successfully", "message_id": result.get("id")}
     except Exception as e:
-        print(f"Error sending email: {str(e)}")  # Add logging
+        print(f"Error sending email: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to send email: {str(e)}"
