@@ -7,10 +7,9 @@ class GmailService:
     def __init__(self, credentials):
         self.service = build('gmail', 'v1', credentials=credentials)
 
-    def create_message(self, sender: str, to: str, subject: str, message_text: str):
+    def create_message(self, to: str, subject: str, message_text: str):
         message = MIMEMultipart()
         message['to'] = to
-        message['from'] = sender
         message['subject'] = subject
 
         msg = MIMEText(message_text)
