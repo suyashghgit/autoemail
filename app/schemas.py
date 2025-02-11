@@ -27,6 +27,7 @@ class ContactBase(BaseModel):
     company_name: Optional[str] = None
     phone_number: Optional[str] = None
     linkedin_url: Optional[str] = None
+    notes: Optional[str] = None
 
 class ContactCreate(ContactBase):
     pass

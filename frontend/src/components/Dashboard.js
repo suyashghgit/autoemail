@@ -12,6 +12,7 @@ import axios from 'axios';
 import EmailGroups from './EmailGroups';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { toast } from 'react-hot-toast';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -253,6 +254,8 @@ const ContactsSection = () => {
   });
   const [formError, setFormError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [editingNotes, setEditingNotes] = useState(null);
+  const [noteText, setNoteText] = useState('');
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -342,6 +345,28 @@ const ContactsSection = () => {
       return `Week ${sequence}`;
     }
     return 'Monthly';
+  };
+
+  const handleNotesUpdate = async (contactId, notes) => {
+    try {
+      await axios.patch(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/contacts/${contactId}`,
+        { notes }
+      );
+      
+      // Update the contacts list with new notes
+      setContacts(contacts.map(contact => 
+        contact.user_id === contactId 
+          ? { ...contact, notes } 
+          : contact
+      ));
+      
+      setEditingNotes(null);
+      toast.success('Notes updated successfully');
+    } catch (err) {
+      toast.error('Failed to update notes');
+      console.error('Failed to update notes:', err);
+    }
   };
 
   if (loading) return <div className="p-4">Loading contacts...</div>;
@@ -475,6 +500,7 @@ const ContactsSection = () => {
               <th className="p-3 text-left">Sequence</th>
               <th className="p-3 text-left">Join Date</th>
               <th className="p-3 text-left">Last Email</th>
+              <th className="p-3 text-left">Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -490,6 +516,52 @@ const ContactsSection = () => {
                 </td>
                 <td className="p-3">
                   {contact.last_email_sent_at ? new Date(contact.last_email_sent_at).toLocaleDateString() : '-'}
+                </td>
+                <td className="p-3">
+                  {editingNotes === contact.user_id ? (
+                    <div className="flex flex-col space-y-2">
+                      <textarea
+                        className="w-full p-2 border rounded-md focus:ring-2 focus:ring-red-500 min-h-[100px]"
+                        value={noteText}
+                        onChange={(e) => setNoteText(e.target.value)}
+                        placeholder="Enter notes here..."
+                      />
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleNotesUpdate(contact.user_id, noteText)}
+                          className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingNotes(null);
+                            setNoteText('');
+                          }}
+                          className="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div 
+                      className="group relative cursor-pointer"
+                      onClick={() => {
+                        setEditingNotes(contact.user_id);
+                        setNoteText(contact.notes || '');
+                      }}
+                    >
+                      <div className="min-h-[1.5rem] max-h-[4.5rem] overflow-hidden">
+                        {contact.notes ? (
+                          <p className="whitespace-pre-wrap">{contact.notes}</p>
+                        ) : (
+                          <p className="text-gray-400 italic">Click to add notes</p>
+                        )}
+                      </div>
+                      <div className="absolute inset-0 bg-gray-100 opacity-0 group-hover:opacity-10 transition-opacity" />
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

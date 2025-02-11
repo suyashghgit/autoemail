@@ -16,6 +16,7 @@ class Contact(Base):
     email_sequence = Column(Integer, default=0)
     join_date = Column(DateTime(timezone=True), nullable=False)
     last_email_sent_at = Column(DateTime(timezone=True), nullable=False)
+    notes = Column(Text, nullable=True)
 
     email_metrics = relationship(
         "EmailMetric",

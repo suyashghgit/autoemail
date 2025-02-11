@@ -92,4 +92,19 @@ def update_sequences(db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=500,
             detail=f"Error updating sequences: {str(e)}"
-        ) 
+        )
+
+@router.patch("/contacts/{contact_id}")
+def update_contact_notes(
+    contact_id: int,
+    notes: dict,
+    db: Session = Depends(get_db)
+):
+    contact = db.query(models.Contact).filter(models.Contact.user_id == contact_id).first()
+    if not contact:
+        raise HTTPException(status_code=404, detail="Contact not found")
+    
+    contact.notes = notes.get('notes')
+    db.commit()
+    db.refresh(contact)
+    return contact 
