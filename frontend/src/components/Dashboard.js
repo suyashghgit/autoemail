@@ -280,6 +280,7 @@ const ContactsSection = () => {
     setSuccessMessage(null);
 
     try {
+      // Create contact
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/contacts`,
         formData
@@ -288,6 +289,33 @@ const ContactsSection = () => {
       // Add new contact to the list
       setContacts([...contacts, response.data]);
       
+      // Send initial welcome email using Week 1 sequence
+      try {
+        // Get Week 1 sequence data
+        const sequencesResponse = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/sequences`);
+        const week1Sequence = sequencesResponse.data.find(seq => seq.sequence_id === 1);
+        
+        if (week1Sequence) {
+          await axios.post(
+            `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/send`,
+            {
+              recipient: formData.email_address,
+              subject: "Welcome to US Observer",
+              body: `Dear ${formData.first_name},\n\n${week1Sequence.email_body}`,
+              article_link: week1Sequence.article_link,
+              contact_id: response.data.user_id,
+              sequence_id: 1  // Week 1
+            }
+          );
+          setSuccessMessage('Contact added successfully and welcome email sent!');
+        } else {
+          setSuccessMessage('Contact added successfully, but Week 1 sequence not found.');
+        }
+      } catch (emailErr) {
+        console.error('Failed to send welcome email:', emailErr);
+        setSuccessMessage('Contact added successfully, but welcome email failed to send.');
+      }
+      
       // Reset form
       setFormData({
         first_name: '',
@@ -295,7 +323,6 @@ const ContactsSection = () => {
         email_address: ''
       });
       setShowForm(false);
-      setSuccessMessage('Contact added successfully!');
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
