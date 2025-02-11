@@ -3,10 +3,12 @@ from datetime import datetime
 from typing import List, Optional
 
 class EmailSchema(BaseModel):
-    recipient: EmailStr
+    recipient: str
     subject: str
-    body: str  # This will now contain HTML content
-    article_link: HttpUrl  # This will validate that it's a proper URL
+    body: str
+    article_link: str
+    contact_id: int
+    sequence_id: int
     
     class Config:
         json_schema_extra = {

@@ -82,6 +82,7 @@ const DashboardContent = () => {
   ]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [emailMetrics, setEmailMetrics] = useState([]);
 
   useEffect(() => {
     const fetchSequenceStats = async () => {
@@ -96,7 +97,21 @@ const DashboardContent = () => {
       }
     };
 
+    const fetchEmailMetrics = async () => {
+      try {
+        const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/email_metrics`);
+        // Sort metrics by sequence_id to maintain consistent order
+        const sortedMetrics = response.data.sort((a, b) => a.sequence_id - b.sequence_id);
+        setEmailMetrics(sortedMetrics);
+      } catch (err) {
+        console.error('Failed to fetch email metrics:', err);
+        // Set empty array instead of undefined
+        setEmailMetrics([]);
+      }
+    };
+
     fetchSequenceStats();
+    fetchEmailMetrics();
   }, []);
 
   if (loading) return <div className="text-center p-4">Loading stats...</div>;
@@ -167,6 +182,73 @@ const DashboardContent = () => {
                 </div>
               );
             })}
+        </div>
+      </div>
+
+      {/* Email Metrics Section */}
+      <div className="mt-8 bg-white p-6 rounded-lg shadow">
+        <h3 className="text-xl font-semibold mb-4">Email Performance (Last 30 Days)</h3>
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-6 py-3 text-left">Sequence</th>
+                <th className="px-6 py-3 text-left">Sent</th>
+                <th className="px-6 py-3 text-left">Delivery Rate</th>
+                <th className="px-6 py-3 text-left">Open Rate</th>
+                <th className="px-6 py-3 text-left">Bounce Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {emailMetrics.length > 0 ? (
+                emailMetrics.map((metric) => (
+                  <tr key={metric.sequence_id} className="border-b">
+                    <td className="px-6 py-4">{metric.sequence_name}</td>
+                    <td className="px-6 py-4">{metric.total_sent}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                          <div
+                            className="bg-green-600 h-2.5 rounded-full"
+                            style={{ width: `${metric.delivery_rate}%` }}
+                          ></div>
+                        </div>
+                        {metric.delivery_rate}%
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                          <div
+                            className="bg-blue-600 h-2.5 rounded-full"
+                            style={{ width: `${metric.open_rate}%` }}
+                          ></div>
+                        </div>
+                        {metric.open_rate}%
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center">
+                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                          <div
+                            className="bg-red-600 h-2.5 rounded-full"
+                            style={{ width: `${metric.bounce_rate}%` }}
+                          ></div>
+                        </div>
+                        {metric.bounce_rate}%
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                    No email metrics available for the last 30 days
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

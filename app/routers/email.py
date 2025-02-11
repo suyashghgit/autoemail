@@ -89,6 +89,7 @@ async def fetch_article_content(url: str) -> str:
 async def send_email(
     email: EmailSchema,
     request: Request,
+    db: Session = Depends(get_db),
     credentials: dict = Depends(get_credentials)
 ):
     try:
@@ -163,6 +164,18 @@ async def send_email(
             image_path=logo_path
         )
         result = gmail_service.send_message(message)
+        
+        # Record the email metric
+        metric = models.EmailMetric(
+            contact_id=email.contact_id,
+            sequence_id=email.sequence_id,
+            message_id=result.get("id"),
+            status="delivered",
+            sent_at=datetime.now()
+        )
+        db.add(metric)
+        db.commit()
+        
         return {"message": "Email sent successfully", "message_id": result.get("id")}
     except FileNotFoundError as e:
         print(f"File error: {str(e)}")
@@ -171,6 +184,17 @@ async def send_email(
             detail=str(e)
         )
     except Exception as e:
+        # Record failed attempt
+        if 'email' in locals():
+            metric = models.EmailMetric(
+                contact_id=email.contact_id,
+                sequence_id=email.sequence_id,
+                status="failed",
+                sent_at=datetime.now()
+            )
+            db.add(metric)
+            db.commit()
+        
         print(f"Error sending email: {str(e)}")
         raise HTTPException(
             status_code=500,
@@ -229,11 +253,13 @@ async def send_group_email(
                     recipient=contact.email_address,
                     subject=group_email.subject,
                     body=f"Dear {contact.first_name},\n\n{group_email.body}",
-                    article_link=article_link
+                    article_link=article_link,
+                    contact_id=contact.user_id,
+                    sequence_id=group_email.sequence_id
                 )
                 
                 # Use the existing send_email function
-                result = await send_email(email, request, credentials)
+                result = await send_email(email, request, db, credentials)
                 
                 # Update last_email_sent_at
                 contact.last_email_sent_at = datetime.now()
