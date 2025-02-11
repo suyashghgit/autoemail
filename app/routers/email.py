@@ -27,74 +27,146 @@ def get_template(template_name):
 async def fetch_article_content(url: str) -> str:
     """Fetch and extract the main content from the article URL"""
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url)
+        # Add timeout and follow_redirects parameters
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            print(f"Attempting to fetch content from: {url}")  # Debug log
+            
+            # Add headers to mimic a browser request
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+            }
+            
+            response = await client.get(url, headers=headers)
+            print(f"Response status code: {response.status_code}")  # Debug log
+            
             if response.status_code != 200:
-                # Return a default message instead of raising an exception
+                print(f"Failed to fetch content. Status code: {response.status_code}")
                 return f"""
                 <div class='blog-content'>
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
                     </div>
-                    <p>The article content is currently unavailable. Please visit 
+                    <p>The article content is currently unavailable (Status: {response.status_code}). Please visit 
                     <a href="{url}">the article page</a> directly to read the full content.</p>
                 </div>
                 """
             
+            # Print the first 500 characters of the response for debugging
+            print(f"Response content preview: {response.text[:500]}")
+            
             # Parse the HTML content
             soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Find the specific div with class "blog-content"
             article_content = soup.find('div', class_='blog-content')
             
+            if not article_content:
+                print("Could not find blog-content div")  # Debug log
+                # Try alternative content selectors
+                article_content = (
+                    soup.find('article') or 
+                    soup.find('div', class_='post-content') or
+                    soup.find('div', class_='entry-content')
+                )
+            
             if article_content:
-                # Clean up the content
-                # Remove unwanted elements
+                print("Successfully found article content")  # Debug log
+                # Only remove potentially harmful elements
                 for script in article_content.find_all('script'):
                     script.decompose()
-                for style in article_content.find_all('style'):
-                    style.decompose()
                 for iframe in article_content.find_all('iframe'):
                     iframe.decompose()
                 
+                # Keep all style tags and CSS classes
                 # Convert relative URLs to absolute URLs
-                base_url = str(url)
+                base_url = urlparse(url)
+                base_domain = f"{base_url.scheme}://{base_url.netloc}"
+                
+                # Enhance image handling
                 for img in article_content.find_all('img'):
-                    src = img.get('src', '')
-                    if src and not src.startswith(('http://', 'https://')):
-                        img['src'] = f"{base_url.rstrip('/')}/{src.lstrip('/')}"
+                    try:
+                        # Convert relative URLs to absolute
+                        src = img.get('src', '')
+                        if src:
+                            if src.startswith('/'):
+                                img['src'] = f"{base_domain}{src}"
+                            elif not src.startswith(('http://', 'https://')):
+                                img['src'] = f"{base_domain}/{src.lstrip('/')}"
+                        
+                        # Create new container
+                        container = soup.new_tag('div')
+                        container['class'] = 'image-container'
+                        container['style'] = (
+                            "border: 1px solid #ddd; "
+                            "padding: 4px; "
+                            "margin: 10px 0; "
+                            "display: inline-block; "
+                            "max-width: 100%; "
+                            "box-sizing: border-box; "
+                            "float: left; "
+                            "margin-right: 15px; "
+                            "margin-bottom: 10px;"
+                        )
+                        
+                        # Add styling to image
+                        img['style'] = "max-width: 100%; height: auto; display: block; margin: 0;"
+                        
+                        # Wrap image in container
+                        img.wrap(container)
+                        
+                        # Look specifically for WordPress caption
+                        caption = img.find_next('p', class_='wp-caption-text')
+                        if not caption:
+                            # Also look for caption by ID if class not found
+                            caption = img.find_next('p', id=lambda x: x and 'caption-attachment' in x)
+                        
+                        if caption:
+                            # Create new caption div inside container
+                            caption_div = soup.new_tag('div')
+                            caption_div['style'] = "margin: 5px 0 0 0; text-align: center; font-style: italic;"
+                            caption_div.string = caption.get_text()
+                            container.append(caption_div)
+                            caption.decompose()  # Remove original caption
+                    
+                    except Exception as img_error:
+                        print(f"Error processing image: {str(img_error)}")
+                        continue
                 
-                for a in article_content.find_all('a'):
-                    href = a.get('href', '')
-                    if href and not href.startswith(('http://', 'https://')):
-                        a['href'] = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
+                # Add clearfix at the end of content
+                clear_div = soup.new_tag('div')
+                clear_div['style'] = "clear: both;"
+                article_content.append(clear_div)
                 
+                # Preserve all original classes and styles
                 return f"""
                 <div style="text-align: center; margin-bottom: 20px;">
                     <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
                 </div>
-                {str(article_content)}
-                """
-            
-            # If blog-content div not found, return a default message
-            return f"""
-            <div class='blog-content'>
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                <div class="article-container" style="max-width: 100%; margin: 0 auto; overflow: hidden;">
+                    {str(article_content)}
                 </div>
-                <p>The article content could not be extracted. Please visit 
-                <a href="{url}">the article page</a> directly to read the full content.</p>
-            </div>
-            """
+                """
+            else:
+                print("No article content found with any selector")  # Debug log
+                return f"""
+                <div class='blog-content'>
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                    </div>
+                    <p>Unable to extract the article content. Please visit 
+                    <a href="{url}">the article page</a> directly to read the full content.</p>
+                </div>
+                """
     except Exception as e:
-        # Handle any network or parsing errors
         print(f"Error fetching article content: {str(e)}")
+        print(f"Error type: {type(e)}")  # Additional error info
+        print(f"Error details: {e.__dict__}")  # More error details if available
         return f"""
         <div class='blog-content'>
             <div style="text-align: center; margin-bottom: 20px;">
                 <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
             </div>
-            <p>The article content is temporarily unavailable. Please visit 
+            <p>The article content is temporarily unavailable (Error: {str(e)}). Please visit 
             <a href="{url}">the article page</a> directly to read the full content.</p>
         </div>
         """
