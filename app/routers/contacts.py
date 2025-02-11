@@ -8,5 +8,5 @@ router = APIRouter()
 
 @router.get("/contacts")
 def get_contacts(db: Session = Depends(get_db)):
-    contacts = db.query(models.Contact).all()
+    contacts = db.query(models.Contact).order_by(models.Contact.user_id.asc()).all()
     return contacts 

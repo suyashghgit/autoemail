@@ -26,9 +26,9 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 pt-24">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-md">
+      <div className="fixed left-0 top-24 h-[calc(100vh-6rem)] w-64 bg-white shadow-md">
         <div className="p-5 border-b">
           <h1 className="text-2xl font-bold text-[#c41e3a]">US Observer</h1>
         </div>
@@ -56,7 +56,7 @@ const Dashboard = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 p-10 overflow-y-auto">
+      <div className="ml-64 flex-1 p-10 overflow-y-auto">
         <AuthStatus />
         {renderContent()}
       </div>
