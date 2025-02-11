@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, HttpUrl
+from datetime import datetime
 
 class EmailSchema(BaseModel):
     recipient: EmailStr
@@ -16,16 +17,22 @@ class EmailSchema(BaseModel):
             }
         } 
 
-class Contact(BaseModel):
-    id: int
-    user_id: str
+class ContactBase(BaseModel):
     first_name: str
     last_name: str
-    email: str
-    sequence: str
+    email_address: EmailStr
+
+class ContactCreate(ContactBase):
+    pass
+
+class Contact(ContactBase):
+    user_id: int
+    email_sequence: int
+    join_date: datetime
+    last_email_sent_at: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
 
 class SequenceMappingBase(BaseModel):
     email_body: str

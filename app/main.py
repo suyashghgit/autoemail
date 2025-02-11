@@ -6,6 +6,9 @@ from google.oauth2.credentials import Credentials
 import uvicorn
 from app.config import settings
 from fastapi.middleware.cors import CORSMiddleware
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
+import httpx
 
 app = FastAPI()
 
@@ -23,6 +26,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Set up scheduler
+scheduler = BackgroundScheduler()
+
+# Function to update sequences
+async def update_sequences_job():
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.put(
+                "http://localhost:8000/contacts/update-sequences"
+            )
+            print("Sequences updated:", response.status_code)
+        except Exception as e:
+            print("Error updating sequences:", str(e))
+
+# Schedule the job to run daily at midnight
+scheduler.add_job(
+    update_sequences_job,
+    trigger=CronTrigger(hour=0, minute=0),
+    id='update_sequences',
+    name='Update email sequences daily'
+)
+
+@app.on_event("startup")
+async def start_scheduler():
+    scheduler.start()
+
+@app.on_event("shutdown")
+async def shutdown_scheduler():
+    scheduler.shutdown()
 
 # Include routers
 from app.routers import auth, email, contacts, sequences, dashboard
