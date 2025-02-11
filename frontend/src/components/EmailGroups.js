@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const EmailGroups = () => {
   const [groups, setGroups] = useState([]);
@@ -45,17 +46,31 @@ const EmailGroups = () => {
         {
           sequence_id: group.sequence_id,
           subject: "Test subject",
-          // The backend will fetch email_body and article_link from sequence_mapping
         }
       );
 
-      // Show success message
-      setSuccessMessage(`Successfully sent ${response.data.successful_sends} emails`);
+      // Show success toast
+      toast.success(`Successfully sent ${response.data.successful_sends} emails`, {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#10B981',
+          color: 'white',
+        },
+      });
       
       // Refresh groups data
       fetchGroups();
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to send group emails');
+      // Show error toast
+      toast.error(err.response?.data?.detail || 'Failed to send group emails', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: 'white',
+        },
+      });
     }
   };
 

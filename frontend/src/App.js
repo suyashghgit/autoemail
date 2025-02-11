@@ -1,13 +1,17 @@
 import React from 'react';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Header />
-      <Dashboard />
-    </div>
+    <>
+      <Toaster />
+      <div className="min-h-screen bg-gray-100">
+        <Header />
+        <Dashboard />
+      </div>
+    </>
   );
 }
 
