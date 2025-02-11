@@ -10,9 +10,18 @@ import AuthStatus from './AuthStatus';
 import { getContacts } from '../services/api';
 import axios from 'axios';
 import EmailGroups from './EmailGroups';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  const navItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
+    { icon: Users, label: 'Contacts', key: 'contacts' },
+    { icon: Mail, label: 'Email Sequences', key: 'sequences' },
+    { icon: UserPlus, label: 'Email Groups', key: 'groups' }
+  ];
 
   const renderContent = () => {
     switch(activeTab) {
@@ -37,26 +46,24 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold text-[#c41e3a]">US Observer</h1>
         </div>
         <nav className="p-4">
-          {[
-            { icon: <LayoutDashboard />, label: 'Dashboard', key: 'dashboard' },
-            { icon: <Users />, label: 'Contacts', key: 'contacts' },
-            { icon: <Mail />, label: 'Email Sequences', key: 'sequences' },
-            { icon: <UserPlus />, label: 'Email Groups', key: 'groups' }
-          ].map(item => (
-            <button 
-              key={item.key}
-              onClick={() => setActiveTab(item.key)}
-              className={`
-                flex items-center w-full p-3 mb-2 rounded 
-                ${activeTab === item.key 
-                  ? 'bg-red-100 text-[#c41e3a]' 
-                  : 'hover:bg-gray-100'}
-              `}
-            >
-              {item.icon}
-              <span className="ml-3">{item.label}</span>
-            </button>
-          ))}
+          {navItems.map(item => {
+            const Icon = item.icon;
+            return (
+              <button 
+                key={item.key}
+                onClick={() => setActiveTab(item.key)}
+                className={`
+                  flex items-center w-full p-3 mb-2 rounded 
+                  ${activeTab === item.key 
+                    ? 'bg-red-100 text-[#c41e3a]' 
+                    : 'hover:bg-gray-100'}
+                `}
+              >
+                <Icon />
+                <span className="ml-3">{item.label}</span>
+              </button>
+            );
+          })}
         </nav>
       </div>
 
@@ -508,6 +515,25 @@ const EmailSequencesSection = () => {
     }
   };
 
+  const modules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      ['link'],
+      ['clean']
+    ],
+  };
+
+  const formats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'link',
+    'color', 'background'
+  ];
+
   const getSequenceLabel = (sequenceId) => {
     if (sequenceId >= 1 && sequenceId <= 6) {
       return `Week ${sequenceId}`;
@@ -566,15 +592,21 @@ const EmailSequencesSection = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email Body
                   </label>
-                  <textarea
-                    name="email_body"
-                    value={editForm.email_body}
-                    onChange={handleChange}
-                    rows={4}
-                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-red-500 ${
-                      formErrors.email_body ? 'border-red-500' : ''
-                    }`}
-                  />
+                  <div className="h-64">
+                    <ReactQuill
+                      theme="snow"
+                      value={editForm.email_body}
+                      onChange={(content) => {
+                        setEditForm({
+                          ...editForm,
+                          email_body: content
+                        });
+                      }}
+                      modules={modules}
+                      formats={formats}
+                      className="h-48"
+                    />
+                  </div>
                   {formErrors.email_body && (
                     <p className="text-red-500 text-sm mt-1">{formErrors.email_body}</p>
                   )}
@@ -599,7 +631,10 @@ const EmailSequencesSection = () => {
                   </a>
                 </div>
                 <div className="text-gray-600">
-                  <p className="line-clamp-3">{sequence.email_body}</p>
+                  <div 
+                    className="line-clamp-3"
+                    dangerouslySetInnerHTML={{ __html: sequence.email_body }}
+                  />
                 </div>
                 <button
                   onClick={() => handleEdit(sequence)}

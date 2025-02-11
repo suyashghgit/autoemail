@@ -5,7 +5,7 @@ from typing import List, Optional
 class EmailSchema(BaseModel):
     recipient: str
     subject: str
-    body: str
+    body: str  # This will now contain HTML content
     article_link: str
     contact_id: int
     sequence_id: int
@@ -15,7 +15,7 @@ class EmailSchema(BaseModel):
             "example": {
                 "recipient": "example@email.com",
                 "subject": "Important Information About Your Company",
-                "body": "<html><body><h1>Your email content here...</h1></body></html>",
+                "body": "<p>Your <strong>formatted</strong> email content here...</p>",
                 "article_link": "https://www.usobserver.com/article/123"
             }
         } 
