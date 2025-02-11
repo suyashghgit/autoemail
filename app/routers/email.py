@@ -139,10 +139,10 @@ async def fetch_article_content(url: str) -> str:
                 
                 # Preserve all original classes and styles
                 return f"""
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
-                </div>
                 <div class="article-container" style="max-width: 100%; margin: 0 auto; overflow: hidden;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                    </div>
                     {str(article_content)}
                 </div>
                 """
@@ -231,9 +231,6 @@ async def send_email(
                 </style>
             </head>
             <body>
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
-                </div>
                 <div class="email-body">
                     {email_body}
                 </div>
