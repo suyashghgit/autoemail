@@ -4,7 +4,7 @@ from .database import Base
 class Contact(Base):
     __tablename__ = "mailing_list"
 
-    user_id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, primary_key=True, autoincrement=True)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=False)
     email_address = Column(String(255), nullable=False, unique=True)

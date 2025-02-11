@@ -22,20 +22,33 @@ def create_contact(contact: ContactCreate, db: Session = Depends(get_db)):
             detail="Email already registered"
         )
     
-    # Create new contact with sequence 1 and today's date
-    new_contact = models.Contact(
-        first_name=contact.first_name,
-        last_name=contact.last_name,
-        email_address=contact.email_address,
-        email_sequence=1,  # Start with sequence 1
-        join_date=datetime.now(),
-        last_email_sent_at=datetime.now()
-    )
-    
-    db.add(new_contact)
-    db.commit()
-    db.refresh(new_contact)
-    return new_contact
+    try:
+        # Get the next available user_id
+        max_id = db.query(func.max(models.Contact.user_id)).scalar() or 0
+        next_id = max_id + 1
+        
+        # Create new contact
+        new_contact = models.Contact(
+            user_id=next_id,  # Explicitly set the next ID
+            first_name=contact.first_name,
+            last_name=contact.last_name,
+            email_address=contact.email_address,
+            email_sequence=1,  # Start with sequence 1
+            join_date=datetime.now(),
+            last_email_sent_at=datetime.now()
+        )
+        
+        db.add(new_contact)
+        db.commit()
+        db.refresh(new_contact)
+        return new_contact
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while creating the contact: {str(e)}"
+        )
 
 @router.get("/contacts")
 def get_contacts(db: Session = Depends(get_db)):

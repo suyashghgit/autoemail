@@ -172,6 +172,14 @@ const ContactsSection = () => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    first_name: '',
+    last_name: '',
+    email_address: ''
+  });
+  const [formError, setFormError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -188,12 +196,125 @@ const ContactsSection = () => {
     fetchContacts();
   }, []);
 
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    setFormError(null); // Clear error when user types
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setFormError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/contacts`,
+        formData
+      );
+      
+      // Add new contact to the list
+      setContacts([...contacts, response.data]);
+      
+      // Reset form
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email_address: ''
+      });
+      setShowForm(false);
+      setSuccessMessage('Contact added successfully!');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err) {
+      setFormError(err.response?.data?.detail || 'Failed to add contact');
+    }
+  };
+
   if (loading) return <div className="p-4">Loading contacts...</div>;
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-6">Contacts</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold">Contacts</h2>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className="bg-[#c41e3a] text-white px-4 py-2 rounded hover:bg-red-700"
+        >
+          {showForm ? 'Cancel' : 'Add Contact'}
+        </button>
+      </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Add Contact Form */}
+      {showForm && (
+        <div className="bg-white shadow rounded-lg p-6 mb-6">
+          <h3 className="text-xl font-semibold mb-4">Add New Contact</h3>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  name="first_name"
+                  value={formData.first_name}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email_address"
+                value={formData.email_address}
+                onChange={handleInputChange}
+                required
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            {formError && (
+              <div className="text-red-500 text-sm">{formError}</div>
+            )}
+            <button
+              type="submit"
+              className="bg-[#c41e3a] text-white px-4 py-2 rounded hover:bg-red-700"
+            >
+              Add Contact
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="bg-white shadow rounded-lg p-6">
         <table className="w-full">
           <thead>
