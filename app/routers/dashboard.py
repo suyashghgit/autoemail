@@ -24,7 +24,9 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
     
     # Convert SQLAlchemy result to list of SequenceStats
     sequence_stats = []
-    for seq in range(1, 7):  # Weeks 1-6
+    
+    # Include all weeks 1-10
+    for seq in range(1, 11):
         stat = next((s for s in stats if s.sequence_id == seq), None)
         sequence_stats.append({
             "sequence_id": seq,
@@ -36,10 +38,10 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
             "success_rate": 0.0
         })
     
-    # Add monthly (sequence 9)
-    stat = next((s for s in stats if s.sequence_id == 9), None)
+    # Add monthly (sequence 15)
+    stat = next((s for s in stats if s.sequence_id == 15), None)
     sequence_stats.append({
-        "sequence_id": 9,
+        "sequence_id": 15,
         "sequence_name": "Monthly",
         "total_contacts": stat.total_contacts if stat else 0,
         "completed_contacts": 0,
@@ -72,7 +74,7 @@ async def get_email_metrics(db: Session = Depends(get_db)):
     # Format the results
     result = []
     for metric in metrics:
-        sequence_name = "Monthly" if metric.sequence_id == 9 else f"Week {metric.sequence_id}"
+        sequence_name = "Monthly" if metric.sequence_id == 15 else f"Week {metric.sequence_id}"
         result.append({
             "sequence_id": metric.sequence_id,
             "sequence_name": sequence_name,

@@ -62,8 +62,8 @@ def get_contacts(db: Session = Depends(get_db)):
 def update_sequences(db: Session = Depends(get_db)):
     """
     Update sequences based on join date:
-    - Week 1-6: sequence = week number
-    - After 6 weeks: sequence = 9 (monthly)
+    - Week 1-10: sequence = week number
+    - After 10 weeks: sequence = 15 (monthly)
     """
     try:
         # Get all contacts
@@ -75,10 +75,10 @@ def update_sequences(db: Session = Depends(get_db)):
             weeks_since_join = (now - contact.join_date).days // 7
             
             # Determine new sequence
-            if weeks_since_join < 6:
+            if weeks_since_join < 10:
                 new_sequence = weeks_since_join + 1
             else:
-                new_sequence = 9
+                new_sequence = 15  # Monthly
                 
             # Update sequence if different
             if contact.email_sequence != new_sequence:

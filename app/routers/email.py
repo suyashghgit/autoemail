@@ -386,34 +386,53 @@ async def send_group_email(
 @router.get("/email_groups", response_model=List[schemas.EmailGroup])
 def get_email_groups(db: Session = Depends(get_db)):
     """Get all contacts grouped by their sequence number"""
-    groups = []
-    
-    # Query to get contacts grouped by sequence with counts
-    sequences = db.query(
-        models.Contact.email_sequence,
-        func.count(models.Contact.user_id).label('contact_count')
-    ).group_by(models.Contact.email_sequence).all()
-    
-    for sequence_id, count in sequences:
-        # Skip sequence 0 as it's typically used for new/unassigned contacts
-        if sequence_id == 0:
-            continue
-            
-        # Get all contacts for this sequence
-        contacts = db.query(models.Contact).filter(
-            models.Contact.email_sequence == sequence_id
+    try:
+        # Get all sequences first (both active and inactive)
+        sequences = db.query(models.SequenceMapping).filter(
+            models.SequenceMapping.sequence_id.in_(list(range(1, 11)) + [15])  # Weeks 1-10 and Monthly (15)
         ).all()
         
-        # Create group name based on sequence ID
-        group_name = f"Week {sequence_id}" if sequence_id <= 6 else "Monthly"
+        # Create a mapping of sequence_id to is_active status
+        sequence_status = {seq.sequence_id: seq.is_active for seq in sequences}
         
-        # Create EmailGroup object
-        group = {
-            "sequence_id": sequence_id,
-            "group_name": group_name,
-            "contact_count": count,
-            "contacts": contacts
-        }
-        groups.append(group)
-    
-    return sorted(groups, key=lambda x: x["sequence_id"]) 
+        groups = []
+        
+        # Query to get contacts grouped by sequence with counts
+        contact_groups = db.query(
+            models.Contact.email_sequence,
+            func.count(models.Contact.user_id).label('contact_count')
+        ).group_by(models.Contact.email_sequence).all()
+        
+        # Create a mapping of sequence_id to contact count
+        sequence_counts = {seq_id: count for seq_id, count in contact_groups}
+        
+        # Create groups for all sequences (1-10 and 15), even if they have no contacts
+        for sequence_id in list(range(1, 11)) + [15]:
+            # Skip if sequence is explicitly marked as inactive
+            if sequence_id in sequence_status and not sequence_status[sequence_id]:
+                continue
+                
+            # Get contacts for this sequence
+            contacts = db.query(models.Contact).filter(
+                models.Contact.email_sequence == sequence_id
+            ).all()
+            
+            # Create group name based on sequence ID
+            group_name = f"Week {sequence_id}" if sequence_id <= 10 else "Monthly"
+            
+            # Create EmailGroup object
+            group = {
+                "sequence_id": sequence_id,
+                "group_name": group_name,
+                "contact_count": sequence_counts.get(sequence_id, 0),
+                "contacts": contacts
+            }
+            groups.append(group)
+        
+        return sorted(groups, key=lambda x: x["sequence_id"])
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch email groups: {str(e)}"
+        ) 
