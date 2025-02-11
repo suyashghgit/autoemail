@@ -1,22 +1,21 @@
 import React from 'react';
-import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 
 const Header = () => {
   return (
-    <AppBar position="static">
-      <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+    <header className="bg-[#c41e3a] text-white p-4">
+      <div className="container mx-auto flex items-center justify-between">
+        <div className="flex items-center space-x-4">
           <img 
-            src="/logo.png" 
+            src="/assets/logo.png"
             alt="US Observer Logo" 
-            style={{ height: 40, marginRight: 16 }}
+            className="h-16"
           />
-          <Typography variant="h6">
+          <h1 className="text-2xl font-bold">
             US Observer Email System
-          </Typography>
-        </Box>
-      </Toolbar>
-    </AppBar>
+          </h1>
+        </div>
+      </div>
+    </header>
   );
 };
 

@@ -15,3 +15,14 @@ class EmailSchema(BaseModel):
                 "article_link": "https://www.usobserver.com/article/123"
             }
         } 
+
+class Contact(BaseModel):
+    id: int
+    user_id: str
+    first_name: str
+    last_name: str
+    email: str
+    sequence: str
+
+    class Config:
+        from_attributes = True 

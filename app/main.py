@@ -25,9 +25,10 @@ app.add_middleware(
 )
 
 # Include routers
-from app.routers import auth, email
+from app.routers import auth, email, contacts
 app.include_router(auth.router)
 app.include_router(email.router)
+app.include_router(contacts.router)
 
 @app.get("/")
 async def root():

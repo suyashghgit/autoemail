@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import EmailForm from './EmailForm';
 import AuthStatus from './AuthStatus';
+import { getContacts } from '../services/api';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -81,50 +82,61 @@ const DashboardContent = () => (
   </div>
 );
 
-const ContactsSection = () => (
-  <div>
-    <h2 className="text-3xl font-bold mb-6">Recent Contacts</h2>
-    <div className="bg-white shadow rounded-lg p-6">
-      <table className="w-full">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="p-3 text-left">Email</th>
-            <th className="p-3 text-left">Subject</th>
-            <th className="p-3 text-left">Article Link</th>
-            <th className="p-3 text-left">Date Sent</th>
-          </tr>
-        </thead>
-        <tbody>
-          {[
-            { 
-              email: 'john@example.com', 
-              subject: 'Article Review Request', 
-              article: 'https://usobserver.com/article-1', 
-              date: '2024-02-10' 
-            },
-            { 
-              email: 'jane@example.com', 
-              subject: 'Follow-up on Article', 
-              article: 'https://usobserver.com/article-2', 
-              date: '2024-01-15' 
-            }
-          ].map(contact => (
-            <tr key={contact.email} className="border-b hover:bg-gray-50">
-              <td className="p-3">{contact.email}</td>
-              <td className="p-3">{contact.subject}</td>
-              <td className="p-3">
-                <a href={contact.article} className="text-blue-600 hover:underline">
-                  View Article
-                </a>
-              </td>
-              <td className="p-3">{contact.date}</td>
+const ContactsSection = () => {
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        const data = await getContacts();
+        setContacts(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContacts();
+  }, []);
+
+  if (loading) return <div className="p-4">Loading contacts...</div>;
+  if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
+
+  return (
+    <div>
+      <h2 className="text-3xl font-bold mb-6">Contacts</h2>
+      <div className="bg-white shadow rounded-lg p-6">
+        <table className="w-full">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-3 text-left">User ID</th>
+              <th className="p-3 text-left">Name</th>
+              <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Sequence</th>
+              <th className="p-3 text-left">Join Date</th>
+              <th className="p-3 text-left">Last Email Sent</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {contacts.map(contact => (
+              <tr key={contact.user_id} className="border-b hover:bg-gray-50">
+                <td className="p-3">{contact.user_id}</td>
+                <td className="p-3">{`${contact.first_name} ${contact.last_name}`}</td>
+                <td className="p-3">{contact.email_address}</td>
+                <td className="p-3">{contact.email_sequence}</td>
+                <td className="p-3">{new Date(contact.join_date).toLocaleDateString()}</td>
+                <td className="p-3">{new Date(contact.last_email_sent_at).toLocaleDateString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const EmailSequencesSection = () => {
   return (

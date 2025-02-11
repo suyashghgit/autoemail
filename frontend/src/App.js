@@ -1,15 +1,13 @@
 import React from 'react';
-import { CssBaseline } from '@mui/material';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 
 function App() {
   return (
-    <>
-      <CssBaseline />
+    <div className="min-h-screen bg-gray-100">
       <Header />
       <Dashboard />
-    </>
+    </div>
   );
 }
 

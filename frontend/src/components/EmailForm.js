@@ -12,7 +12,7 @@ import { sendEmail } from '../services/api';
 
 const EmailForm = () => {
   const [formData, setFormData] = useState({
-    recipient: '',
+    recipient_email: '',
     subject: '',
     body: '',
     article_link: ''
@@ -40,7 +40,7 @@ const EmailForm = () => {
         severity: 'success'
       });
       setFormData({
-        recipient: '',
+        recipient_email: '',
         subject: '',
         body: '',
         article_link: ''
@@ -64,8 +64,8 @@ const EmailForm = () => {
           <TextField
             fullWidth
             label="Recipient Email"
-            name="recipient"
-            value={formData.recipient}
+            name="recipient_email"
+            value={formData.recipient_email}
             onChange={handleChange}
             margin="normal"
             required
