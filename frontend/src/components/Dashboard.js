@@ -304,6 +304,13 @@ const ContactsSection = () => {
     }
   };
 
+  const formatSequence = (sequence) => {
+    if (sequence >= 1 && sequence <= 6) {
+      return `Week ${sequence}`;
+    }
+    return 'Monthly';
+  };
+
   if (loading) return <div className="p-4">Loading contacts...</div>;
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
@@ -403,7 +410,7 @@ const ContactsSection = () => {
                 <td className="p-3">{contact.user_id}</td>
                 <td className="p-3">{`${contact.first_name} ${contact.last_name}`}</td>
                 <td className="p-3">{contact.email_address}</td>
-                <td className="p-3">{contact.email_sequence}</td>
+                <td className="p-3">{formatSequence(contact.email_sequence)}</td>
                 <td className="p-3">{new Date(contact.join_date).toLocaleDateString()}</td>
                 <td className="p-3">{new Date(contact.last_email_sent_at).toLocaleDateString()}</td>
               </tr>
