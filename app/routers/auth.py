@@ -53,7 +53,8 @@ async def oauth2callback(request: Request, settings: Settings = Depends(get_sett
             'token_uri': credentials.token_uri,
             'client_id': credentials.client_id,
             'client_secret': credentials.client_secret,
-            'scopes': credentials.scopes
+            'scopes': credentials.scopes,
+            'expiry': credentials.expiry.isoformat() if credentials.expiry else None  # Add expiry time
         }
         
         # Store in session
@@ -65,4 +66,45 @@ async def oauth2callback(request: Request, settings: Settings = Depends(get_sett
         
         return RedirectResponse(url="/")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e)) 
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Add new helper function to check and refresh token
+async def get_valid_credentials(settings: Settings):
+    try:
+        # Try to load existing credentials
+        if not os.path.exists('token.json'):
+            return None
+            
+        with open('token.json', 'r') as token_file:
+            credentials_dict = json.load(token_file)
+            
+        from google.oauth2.credentials import Credentials
+        credentials = Credentials(
+            token=credentials_dict['token'],
+            refresh_token=credentials_dict['refresh_token'],
+            token_uri=credentials_dict['token_uri'],
+            client_id=credentials_dict['client_id'],
+            client_secret=credentials_dict['client_secret'],
+            scopes=credentials_dict['scopes']
+        )
+        
+        # If credentials are expired, refresh them
+        if credentials.expired:
+            credentials.refresh(Request())
+            # Update stored credentials
+            credentials_dict = {
+                'token': credentials.token,
+                'refresh_token': credentials.refresh_token,
+                'token_uri': credentials.token_uri,
+                'client_id': credentials.client_id,
+                'client_secret': credentials.client_secret,
+                'scopes': credentials.scopes,
+                'expiry': credentials.expiry.isoformat() if credentials.expiry else None
+            }
+            with open('token.json', 'w') as token_file:
+                json.dump(credentials_dict, token_file)
+                
+        return credentials
+    except Exception as e:
+        print(f"Error refreshing credentials: {str(e)}")
+        return None 

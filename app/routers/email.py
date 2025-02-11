@@ -309,8 +309,19 @@ async def send_group_email(
         if not sequence_mapping:
             raise HTTPException(
                 status_code=404,
-                detail=f"No sequence mapping found for sequence {group_email.sequence_id}"
+                detail=f"No sequence mapping found for sequence_id: {group_email.sequence_id}"
             )
+
+        # Handle null or empty article_link
+        article_link = sequence_mapping.article_link or ""
+        if article_link and not article_link.startswith(('http://', 'https://')):
+            article_link = f'https://{article_link}'
+        
+        # Track results
+        results = {
+            "successful": [],
+            "failed": []
+        }
 
         # Get all contacts
         contacts = db.query(models.Contact).filter(
@@ -325,16 +336,7 @@ async def send_group_email(
 
         # Update group_email with sequence mapping data
         group_email.body = sequence_mapping.email_body
-        article_link = sequence_mapping.article_link
-        if not article_link.startswith(('http://', 'https://')):
-            article_link = f'https://{article_link}'
         
-        # Track results
-        results = {
-            "successful": [],
-            "failed": []
-        }
-
         # Send email to each contact
         for contact in contacts:
             try:

@@ -1,17 +1,49 @@
+# FastAPI and related
 fastapi
 uvicorn
-python-dotenv
+python-multipart
+starlette
+itsdangerous
+
+# Database
+sqlalchemy
+psycopg2-binary
+
+# Email and validation
 fastapi-mail
 email-validator
+python-jose[cryptography]
+
+# Settings and type hints
 pydantic
 pydantic-settings
-python-multipart
 typing-extensions
-starlette
+
+# Google API
 google-auth
 google-auth-oauthlib
 google-auth-httplib2
 google-api-python-client
-python-jose[cryptography]
+
+# HTTP and parsing
 requests
+httpx
+beautifulsoup4
+
+# Environment variables
+python-dotenv
+
+# Task scheduling
+apscheduler
+
+# Testing
+pytest
+pytest-asyncio
+httpx
 python-jose==3.3.0
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+beautifulsoup4
+
+itsdangerous
