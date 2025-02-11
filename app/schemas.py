@@ -26,3 +26,16 @@ class Contact(BaseModel):
 
     class Config:
         from_attributes = True 
+
+class SequenceMappingBase(BaseModel):
+    email_body: str
+    article_link: HttpUrl
+
+class SequenceMappingCreate(SequenceMappingBase):
+    sequence_id: int
+
+class SequenceMapping(SequenceMappingBase):
+    sequence_id: int
+
+    class Config:
+        from_attributes = True 

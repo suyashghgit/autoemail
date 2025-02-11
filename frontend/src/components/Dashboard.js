@@ -7,6 +7,7 @@ import {
 import EmailForm from './EmailForm';
 import AuthStatus from './AuthStatus';
 import { getContacts } from '../services/api';
+import axios from 'axios';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -139,11 +140,62 @@ const ContactsSection = () => {
 };
 
 const EmailSequencesSection = () => {
+  const [sequences, setSequences] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSequences = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/sequences');
+        setSequences(response.data);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchSequences();
+  }, []);
+
+  const getSequenceLabel = (sequenceId) => {
+    if (sequenceId >= 1 && sequenceId <= 6) {
+      return `Week ${sequenceId}`;
+    }
+    return 'Monthly';
+  };
+
+  if (loading) return <div>Loading sequences...</div>;
+  if (error) return <div className="text-red-500">Error: {error}</div>;
+
   return (
     <div>
-      <h2 className="text-3xl font-bold mb-6">Send Email</h2>
-      <div className="bg-white shadow rounded-lg">
-        <EmailForm />
+      <h2 className="text-3xl font-bold mb-6">Email Sequences</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {sequences.map((sequence) => (
+          <div 
+            key={sequence.sequence_id} 
+            className="bg-white p-6 rounded-lg shadow hover:shadow-lg transition-shadow"
+          >
+            <h3 className="text-xl font-semibold mb-3">
+              {getSequenceLabel(sequence.sequence_id)}
+            </h3>
+            <div className="mb-4">
+              <a 
+                href={sequence.article_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                View Article
+              </a>
+            </div>
+            <div className="text-gray-600">
+              <p className="line-clamp-3">{sequence.email_body}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
