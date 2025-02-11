@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, 
   Users, 
-  Mail
+  Mail,
+  UserPlus
 } from 'lucide-react';
 import EmailForm from './EmailForm';
 import AuthStatus from './AuthStatus';
 import { getContacts } from '../services/api';
 import axios from 'axios';
+import EmailGroups from './EmailGroups';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -20,6 +22,8 @@ const Dashboard = () => {
         return <ContactsSection />;
       case 'sequences':
         return <EmailSequencesSection />;
+      case 'groups':
+        return <EmailGroups />;
       default:
         return <DashboardContent />;
     }
@@ -36,7 +40,8 @@ const Dashboard = () => {
           {[
             { icon: <LayoutDashboard />, label: 'Dashboard', key: 'dashboard' },
             { icon: <Users />, label: 'Contacts', key: 'contacts' },
-            { icon: <Mail />, label: 'Email Sequences', key: 'sequences' }
+            { icon: <Mail />, label: 'Email Sequences', key: 'sequences' },
+            { icon: <UserPlus />, label: 'Email Groups', key: 'groups' }
           ].map(item => (
             <button 
               key={item.key}

@@ -6,7 +6,6 @@ from ..database import get_db
 from pydantic import HttpUrl, validator
 
 router = APIRouter(
-    prefix="",
     tags=["sequences"]
 )
 
@@ -78,4 +77,10 @@ def delete_sequence(sequence_id: int, db: Session = Depends(get_db)):
     
     db.delete(db_sequence)
     db.commit()
-    return {"message": "Sequence deleted successfully"} 
+    return {"message": "Sequence deleted successfully"}
+
+# Remove the old /groups endpoint
+# @router.get("/groups", response_model=List[schemas.EmailGroup])
+# def get_email_groups(db: Session = Depends(get_db)):
+#     """Get all contacts grouped by their sequence number"""
+#     # ... rest of the function remains the same ... 

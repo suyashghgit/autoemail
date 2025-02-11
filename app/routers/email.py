@@ -1,12 +1,22 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
-from app.schemas import EmailSchema
+from app import schemas
+from app.schemas import EmailSchema, GroupEmailSchema
 from app.services import GmailService
 from app.dependencies import get_credentials
 import os
 import httpx
 from bs4 import BeautifulSoup
+from sqlalchemy.orm import Session
+from ..database import get_db
+from .. import models
+from datetime import datetime
+from sqlalchemy import func
+from typing import List
+from app.schemas import EmailGroup
 
-router = APIRouter(prefix="/email", tags=["email"])
+router = APIRouter(
+    tags=["email"]  # Remove the prefix
+)
 
 def get_template(template_name):
     template_path = os.path.join("app", "templates", f"{template_name}.txt")
@@ -141,4 +151,174 @@ async def send_email(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to send email: {str(e)}"
-        ) 
+        )
+
+@router.post("/send-group")
+async def send_group_email(
+    group_email: GroupEmailSchema,
+    request: Request,
+    db: Session = Depends(get_db),
+    credentials: dict = Depends(get_credentials)
+):
+    try:
+        # Get all contacts for the specified sequence
+        contacts = db.query(models.Contact).filter(
+            models.Contact.email_sequence == group_email.sequence_id
+        ).all()
+        
+        if not contacts:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No contacts found in sequence {group_email.sequence_id}"
+            )
+
+        # Get templates
+        signature = ""
+        disclaimer = ""
+        try:
+            signature = get_template("signature")
+            disclaimer = get_template("disclaimer")
+        except FileNotFoundError as e:
+            print(f"Template error: {str(e)}")
+
+        # Get logo path
+        logo_path = os.path.abspath(os.path.join("app", "templates", "logo.png"))
+        if not os.path.exists(logo_path):
+            raise FileNotFoundError(f"Logo file not found at: {logo_path}")
+
+        # Fetch article content once
+        article_content = await fetch_article_content(str(group_email.article_link))
+
+        # Create Gmail service
+        gmail_service = GmailService(credentials)
+        
+        # Track successful and failed emails
+        results = {
+            "successful": [],
+            "failed": []
+        }
+
+        # Send email to each contact
+        for contact in contacts:
+            try:
+                # Personalize message for each contact
+                personalized_body = f"Dear {contact.first_name},\n\n{group_email.body}"
+                
+                # Create full message
+                full_message = f"""
+                <html>
+                    <head>
+                        <style>
+                            body {{
+                                font-family: Arial, sans-serif;
+                                font-size: 14px;
+                                color: #333;
+                                line-height: 1.6;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                        </div>
+                        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                            {personalized_body}
+                        </div>
+                        <div style="margin: 20px 0;">
+                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                                Let's clear up your business's issues and protect what you've built.
+                            </p>
+                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                                <strong>Contact us today to learn how the US Observer can deliver results.</strong>
+                            </p>
+                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                                <strong>Click <a href="{group_email.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong>
+                            </p>
+                        </div>
+                        <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+                            {article_content}
+                        </div>
+                        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                            {signature}
+                        </div>
+                        <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px;">
+                            {disclaimer}
+                        </div>
+                    </body>
+                </html>
+                """
+
+                message = gmail_service.create_message(
+                    to=contact.email_address,
+                    subject=group_email.subject,
+                    message_text=full_message,
+                    image_path=logo_path
+                )
+                
+                result = gmail_service.send_message(message)
+                
+                # Update last_email_sent_at
+                contact.last_email_sent_at = datetime.now()
+                db.commit()
+                
+                results["successful"].append({
+                    "email": contact.email_address,
+                    "message_id": result.get("id")
+                })
+                
+            except Exception as e:
+                results["failed"].append({
+                    "email": contact.email_address,
+                    "error": str(e)
+                })
+
+        # Return summary
+        return {
+            "message": f"Completed sending group emails for sequence {group_email.sequence_id}",
+            "total_contacts": len(contacts),
+            "successful_sends": len(results["successful"]),
+            "failed_sends": len(results["failed"]),
+            "details": results
+        }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send group emails: {str(e)}"
+        )
+
+@router.get("/email_groups", response_model=List[schemas.EmailGroup])
+def get_email_groups(db: Session = Depends(get_db)):
+    """Get all contacts grouped by their sequence number"""
+    groups = []
+    
+    # Query to get contacts grouped by sequence with counts
+    sequences = db.query(
+        models.Contact.email_sequence,
+        func.count(models.Contact.user_id).label('contact_count')
+    ).group_by(models.Contact.email_sequence).all()
+    
+    for sequence_id, count in sequences:
+        # Skip sequence 0 as it's typically used for new/unassigned contacts
+        if sequence_id == 0:
+            continue
+            
+        # Get all contacts for this sequence
+        contacts = db.query(models.Contact).filter(
+            models.Contact.email_sequence == sequence_id
+        ).all()
+        
+        # Create group name based on sequence ID
+        group_name = f"Week {sequence_id}" if sequence_id <= 6 else "Monthly"
+        
+        # Create EmailGroup object
+        group = {
+            "sequence_id": sequence_id,
+            "group_name": group_name,
+            "contact_count": count,
+            "contacts": contacts
+        }
+        groups.append(group)
+    
+    return sorted(groups, key=lambda x: x["sequence_id"]) 
