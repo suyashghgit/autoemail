@@ -34,10 +34,8 @@ class EmailMetric(Base):
     contact_id = Column(Integer, ForeignKey("mailing_list.user_id"))
     sequence_id = Column(Integer)
     message_id = Column(String)
-    status = Column(String)  # 'delivered', 'opened', 'bounced', 'failed'
+    status = Column(String)
     sent_at = Column(DateTime, default=datetime.now)
-    opened_at = Column(DateTime, nullable=True)
-    bounced_at = Column(DateTime, nullable=True)
     
     contact = relationship(
         "Contact",

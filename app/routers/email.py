@@ -165,7 +165,7 @@ async def send_email(
         )
         result = gmail_service.send_message(message)
         
-        # Record the email metric
+        # Record the email metric - UPDATED
         metric = models.EmailMetric(
             contact_id=email.contact_id,
             sequence_id=email.sequence_id,
@@ -184,11 +184,12 @@ async def send_email(
             detail=str(e)
         )
     except Exception as e:
-        # Record failed attempt
+        # Record failed attempt - UPDATED
         if 'email' in locals():
             metric = models.EmailMetric(
                 contact_id=email.contact_id,
                 sequence_id=email.sequence_id,
+                message_id=None,
                 status="failed",
                 sent_at=datetime.now()
             )
