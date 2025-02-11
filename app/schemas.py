@@ -44,6 +44,7 @@ class Contact(ContactBase):
 class SequenceMappingBase(BaseModel):
     email_body: str
     article_link: HttpUrl
+    is_active: bool = True  # Add is_active field with default True
 
 class SequenceMappingCreate(SequenceMappingBase):
     sequence_id: int

@@ -61,22 +61,38 @@ def get_contacts(db: Session = Depends(get_db)):
 @router.put("/update-sequences")
 def update_sequences(db: Session = Depends(get_db)):
     """
-    Update sequences based on join date:
-    - Week 1-10: sequence = week number
+    Update sequences based on join date and active status:
+    - Week 1-10: sequence = next active week number
     - After 10 weeks: sequence = 15 (monthly)
     """
     try:
         # Get all contacts
         contacts = db.query(models.Contact).all()
+        # Get all sequence mappings with their active status
+        sequences = db.query(models.SequenceMapping).order_by(
+            models.SequenceMapping.sequence_id
+        ).all()
+        
+        # Create a mapping of active sequences
+        active_sequences = {seq.sequence_id: seq.is_active for seq in sequences}
         now = datetime.now()
         
         for contact in contacts:
             # Calculate weeks since joining
             weeks_since_join = (now - contact.join_date).days // 7
+            current_sequence = contact.email_sequence
             
-            # Determine new sequence
             if weeks_since_join < 10:
-                new_sequence = weeks_since_join + 1
+                # Find the next active sequence
+                new_sequence = current_sequence
+                for seq_id in range(current_sequence + 1, 11):
+                    if active_sequences.get(seq_id, False):
+                        new_sequence = seq_id
+                        break
+                    
+                # If no active sequences found until 10, move to monthly
+                if new_sequence == current_sequence:
+                    new_sequence = 15
             else:
                 new_sequence = 15  # Monthly
                 

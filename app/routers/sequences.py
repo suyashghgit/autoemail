@@ -19,7 +19,7 @@ def get_sequences(db: Session = Depends(get_db)):
     """Get all sequence mappings"""
     # Initialize default sequences if they don't exist
     default_sequences = [
-        {"sequence_id": i, "email_body": "", "article_link": ""}
+        {"sequence_id": i, "email_body": "", "article_link": "", "is_active": True}
         for i in list(range(1, 11)) + [15]  # Weeks 1-10 and Monthly (15)
     ]
     
