@@ -256,6 +256,10 @@ const ContactsSection = () => {
   const [successMessage, setSuccessMessage] = useState(null);
   const [editingNotes, setEditingNotes] = useState(null);
   const [noteText, setNoteText] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState('user_id');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [sequenceFilter, setSequenceFilter] = useState('all');
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -366,6 +370,55 @@ const ContactsSection = () => {
     } catch (err) {
       toast.error('Failed to update notes');
       console.error('Failed to update notes:', err);
+    }
+  };
+
+  // Filter and sort contacts
+  const filteredContacts = contacts
+    .filter(contact => {
+      // Search filter
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        contact.first_name.toLowerCase().includes(searchLower) ||
+        contact.last_name.toLowerCase().includes(searchLower) ||
+        contact.email_address.toLowerCase().includes(searchLower) ||
+        (contact.company_name || '').toLowerCase().includes(searchLower);
+
+      // Sequence filter
+      const matchesSequence = 
+        sequenceFilter === 'all' || 
+        contact.email_sequence.toString() === sequenceFilter;
+
+      return matchesSearch && matchesSequence;
+    })
+    .sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle special cases for combined fields
+      if (sortField === 'full_name') {
+        aValue = `${a.first_name} ${a.last_name}`;
+        bValue = `${b.first_name} ${b.last_name}`;
+      }
+
+      // Handle date fields
+      if (sortField === 'join_date' || sortField === 'last_email_sent_at') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  // Add this before the return statement
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
     }
   };
 
@@ -489,22 +542,152 @@ const ContactsSection = () => {
         </div>
       )}
 
+      {/* Search and Filter Controls */}
+      <div className="bg-white shadow rounded-lg p-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Search Contacts
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name, email, or company..."
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+
+          {/* Sequence Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Filter by Sequence
+            </label>
+            <select
+              value={sequenceFilter}
+              onChange={(e) => setSequenceFilter(e.target.value)}
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+            >
+              <option value="all">All Sequences</option>
+              {[1, 2, 3, 4, 5, 6, 9].map((seq) => (
+                <option key={seq} value={seq.toString()}>
+                  {seq === 9 ? 'Monthly' : `Week ${seq}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Results Count */}
+          <div className="flex items-end">
+            <p className="text-gray-600">
+              Showing {filteredContacts.length} of {contacts.length} contacts
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Updated Table Headers */}
       <div className="bg-white shadow rounded-lg p-6">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-100">
-              <th className="p-3 text-left">User ID</th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Email</th>
-              <th className="p-3 text-left">Company</th>
-              <th className="p-3 text-left">Sequence</th>
-              <th className="p-3 text-left">Join Date</th>
-              <th className="p-3 text-left">Last Email</th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('user_id')}
+              >
+                <div className="flex items-center">
+                  User ID
+                  {sortField === 'user_id' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('full_name')}
+              >
+                <div className="flex items-center">
+                  Name
+                  {sortField === 'full_name' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('email_address')}
+              >
+                <div className="flex items-center">
+                  Email
+                  {sortField === 'email_address' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('company_name')}
+              >
+                <div className="flex items-center">
+                  Company
+                  {sortField === 'company_name' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('email_sequence')}
+              >
+                <div className="flex items-center">
+                  Sequence
+                  {sortField === 'email_sequence' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('join_date')}
+              >
+                <div className="flex items-center">
+                  Join Date
+                  {sortField === 'join_date' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('last_email_sent_at')}
+              >
+                <div className="flex items-center">
+                  Last Email
+                  {sortField === 'last_email_sent_at' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
               <th className="p-3 text-left">Notes</th>
             </tr>
           </thead>
           <tbody>
-            {contacts.map(contact => (
+            {filteredContacts.map(contact => (
               <tr key={contact.user_id} className="border-b hover:bg-gray-50">
                 <td className="p-3">{contact.user_id}</td>
                 <td className="p-3">{`${contact.first_name} ${contact.last_name}`}</td>
