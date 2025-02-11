@@ -13,6 +13,7 @@ from datetime import datetime
 from sqlalchemy import func
 from typing import List
 from app.schemas import EmailGroup
+from urllib.parse import urlparse
 
 router = APIRouter(
     tags=["email"]  # Remove the prefix
@@ -25,41 +26,64 @@ def get_template(template_name):
 
 async def fetch_article_content(url: str) -> str:
     """Fetch and extract the main content from the article URL"""
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-        if response.status_code != 200:
-            raise HTTPException(status_code=404, detail="Could not fetch article content")
-        
-        # Parse the HTML content
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Find the specific div with class "blog-content"
-        article_content = soup.find('div', class_='blog-content')
-        
-        if article_content:
-            # Clean up the content
-            # Remove unwanted elements
-            for script in article_content.find_all('script'):
-                script.decompose()
-            for style in article_content.find_all('style'):
-                style.decompose()
-            for iframe in article_content.find_all('iframe'):
-                iframe.decompose()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            if response.status_code != 200:
+                # Return a default message instead of raising an exception
+                return f"""
+                <div class='blog-content'>
+                    <p>The article content is currently unavailable. Please visit 
+                    <a href="{url}">the article page</a> directly to read the full content.</p>
+                </div>
+                """
             
-            # Convert relative URLs to absolute URLs
-            base_url = str(url)
-            for img in article_content.find_all('img'):
-                src = img.get('src', '')
-                if src and not src.startswith(('http://', 'https://')):
-                    img['src'] = f"{base_url.rstrip('/')}/{src.lstrip('/')}"
+            # Parse the HTML content
+            soup = BeautifulSoup(response.text, 'html.parser')
             
-            for a in article_content.find_all('a'):
-                href = a.get('href', '')
-                if href and not href.startswith(('http://', 'https://')):
-                    a['href'] = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
+            # Find the specific div with class "blog-content"
+            article_content = soup.find('div', class_='blog-content')
             
-            return str(article_content)
-        return "<p>Article content could not be extracted</p>"
+            if article_content:
+                # Clean up the content
+                # Remove unwanted elements
+                for script in article_content.find_all('script'):
+                    script.decompose()
+                for style in article_content.find_all('style'):
+                    style.decompose()
+                for iframe in article_content.find_all('iframe'):
+                    iframe.decompose()
+                
+                # Convert relative URLs to absolute URLs
+                base_url = str(url)
+                for img in article_content.find_all('img'):
+                    src = img.get('src', '')
+                    if src and not src.startswith(('http://', 'https://')):
+                        img['src'] = f"{base_url.rstrip('/')}/{src.lstrip('/')}"
+                
+                for a in article_content.find_all('a'):
+                    href = a.get('href', '')
+                    if href and not href.startswith(('http://', 'https://')):
+                        a['href'] = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
+                
+                return str(article_content)
+            
+            # If blog-content div not found, return a default message
+            return f"""
+            <div class='blog-content'>
+                <p>The article content could not be extracted. Please visit 
+                <a href="{url}">the article page</a> directly to read the full content.</p>
+            </div>
+            """
+    except Exception as e:
+        # Handle any network or parsing errors
+        print(f"Error fetching article content: {str(e)}")
+        return f"""
+        <div class='blog-content'>
+            <p>The article content is temporarily unavailable. Please visit 
+            <a href="{url}">the article page</a> directly to read the full content.</p>
+        </div>
+        """
 
 @router.post("/send")
 async def send_email(
@@ -161,10 +185,27 @@ async def send_group_email(
     credentials: dict = Depends(get_credentials)
 ):
     try:
+        print(f"Received request for sequence_id: {group_email.sequence_id}")  # Debug log
+        
+        # Get sequence mapping data
+        sequence_mapping = db.query(models.SequenceMapping).filter(
+            models.SequenceMapping.sequence_id == group_email.sequence_id
+        ).first()
+        
+        print(f"Sequence mapping found: {sequence_mapping is not None}")  # Debug log
+        
+        if not sequence_mapping:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No sequence mapping found for sequence {group_email.sequence_id}"
+            )
+
         # Get all contacts for the specified sequence
         contacts = db.query(models.Contact).filter(
             models.Contact.email_sequence == group_email.sequence_id
         ).all()
+        
+        print(f"Found {len(contacts)} contacts")  # Debug log
         
         if not contacts:
             raise HTTPException(
@@ -173,21 +214,54 @@ async def send_group_email(
             )
 
         # Get templates
-        signature = ""
-        disclaimer = ""
         try:
             signature = get_template("signature")
             disclaimer = get_template("disclaimer")
         except FileNotFoundError as e:
-            print(f"Template error: {str(e)}")
+            print(f"Template error: {str(e)}")  # Debug log
+            signature = ""
+            disclaimer = ""
 
         # Get logo path
         logo_path = os.path.abspath(os.path.join("app", "templates", "logo.png"))
+        print(f"Logo path: {logo_path}")  # Debug log
+        
         if not os.path.exists(logo_path):
+            print(f"Logo file not found at: {logo_path}")  # Debug log
             raise FileNotFoundError(f"Logo file not found at: {logo_path}")
 
-        # Fetch article content once
-        article_content = await fetch_article_content(str(group_email.article_link))
+        # Update group_email with sequence mapping data
+        group_email.body = sequence_mapping.email_body
+        
+        # Ensure article_link is a valid URL
+        article_link = sequence_mapping.article_link
+        if not article_link.startswith(('http://', 'https://')):
+            article_link = f'https://{article_link}'
+        
+        print(f"Article link: {article_link}")  # Debug log
+        
+        try:
+            result = urlparse(article_link)
+            if not all([result.scheme, result.netloc]):
+                raise ValueError("Invalid URL format")
+            group_email.article_link = article_link
+        except Exception as e:
+            print(f"URL parsing error: {str(e)}")  # Debug log
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid article link URL: {str(e)}"
+            )
+
+        # Fetch article content
+        try:
+            article_content = await fetch_article_content(str(group_email.article_link))
+            print("Article content fetched successfully")  # Debug log
+        except Exception as e:
+            print(f"Error fetching article content: {str(e)}")  # Debug log
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to fetch article content: {str(e)}"
+            )
 
         # Create Gmail service
         gmail_service = GmailService(credentials)
@@ -201,6 +275,8 @@ async def send_group_email(
         # Send email to each contact
         for contact in contacts:
             try:
+                print(f"Sending email to: {contact.email_address}")  # Debug log
+                
                 # Personalize message for each contact
                 personalized_body = f"Dear {contact.first_name},\n\n{group_email.body}"
                 
@@ -256,6 +332,7 @@ async def send_group_email(
                 )
                 
                 result = gmail_service.send_message(message)
+                print(f"Email sent successfully to: {contact.email_address}")  # Debug log
                 
                 # Update last_email_sent_at
                 contact.last_email_sent_at = datetime.now()
@@ -267,6 +344,7 @@ async def send_group_email(
                 })
                 
             except Exception as e:
+                print(f"Failed to send email to {contact.email_address}: {str(e)}")  # Debug log
                 results["failed"].append({
                     "email": contact.email_address,
                     "error": str(e)
@@ -282,6 +360,7 @@ async def send_group_email(
         }
 
     except Exception as e:
+        print(f"Global error: {str(e)}")  # Debug log
         db.rollback()
         raise HTTPException(
             status_code=500,

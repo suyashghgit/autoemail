@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, HttpUrl
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 class EmailSchema(BaseModel):
     recipient: EmailStr
@@ -70,16 +70,14 @@ class EmailGroup(BaseModel):
 
 class GroupEmailSchema(BaseModel):
     sequence_id: int
-    subject: str
-    body: str
-    article_link: HttpUrl
+    subject: str = "Test subject"  # Default subject
+    body: str = ""  # Will be populated from sequence_mapping
+    article_link: Optional[str] = None  # Changed from HttpUrl to str
     
     class Config:
         json_schema_extra = {
             "example": {
                 "sequence_id": 1,
-                "subject": "Weekly Update",
-                "body": "Here's your weekly update...",
-                "article_link": "https://www.usobserver.com/article/123"
+                "subject": "Test subject"
             }
         } 
