@@ -3,7 +3,8 @@ import {
   LayoutDashboard, 
   Users, 
   Mail,
-  UserPlus
+  UserPlus,
+  ToggleLeft
 } from 'lucide-react';
 import EmailForm from './EmailForm';
 import AuthStatus from './AuthStatus';
@@ -13,6 +14,7 @@ import EmailGroups from './EmailGroups';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { toast } from 'react-hot-toast';
+import WeekSelector from './WeekSelector';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -21,7 +23,8 @@ const Dashboard = () => {
     { icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
     { icon: Users, label: 'Contacts', key: 'contacts' },
     { icon: Mail, label: 'Email Sequences', key: 'sequences' },
-    { icon: UserPlus, label: 'Email Groups', key: 'groups' }
+    { icon: UserPlus, label: 'Email Groups', key: 'groups' },
+    { icon: ToggleLeft, label: 'Week Selector', key: 'selector' }
   ];
 
   const renderContent = () => {
@@ -34,6 +37,8 @@ const Dashboard = () => {
         return <EmailSequencesSection />;
       case 'groups':
         return <EmailGroups />;
+      case 'selector':
+        return <WeekSelector />;
       default:
         return <DashboardContent />;
     }
@@ -79,14 +84,18 @@ const Dashboard = () => {
 
 const DashboardContent = () => {
   const [sequenceStats, setSequenceStats] = useState([
-    // Default stats structure to prevent errors if API fails
+    // Updated default stats structure
     { sequence_id: 1, sequence_name: 'Week 1', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 2, sequence_name: 'Week 2', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 3, sequence_name: 'Week 3', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 4, sequence_name: 'Week 4', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 5, sequence_name: 'Week 5', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 6, sequence_name: 'Week 6', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
-    { sequence_id: 9, sequence_name: 'Monthly', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 }
+    { sequence_id: 7, sequence_name: 'Week 7', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 8, sequence_name: 'Week 8', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 9, sequence_name: 'Week 9', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 10, sequence_name: 'Week 10', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 15, sequence_name: 'Monthly', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 }
   ]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -134,7 +143,7 @@ const DashboardContent = () => {
     <div>
       <h2 className="text-3xl font-bold mb-6">Dashboard Overview</h2>
       
-      {/* Sequence Distribution Cards */}
+      {/* Sequence Distribution Cards - Updated */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Week 1', sequence_id: 1, color: 'bg-blue-100' },
@@ -143,7 +152,11 @@ const DashboardContent = () => {
           { label: 'Week 4', sequence_id: 4, color: 'bg-purple-100' },
           { label: 'Week 5', sequence_id: 5, color: 'bg-pink-100' },
           { label: 'Week 6', sequence_id: 6, color: 'bg-indigo-100' },
-          { label: 'Monthly', sequence_id: 9, color: 'bg-red-100' },
+          { label: 'Week 7', sequence_id: 7, color: 'bg-orange-100' },
+          { label: 'Week 8', sequence_id: 8, color: 'bg-teal-100' },
+          { label: 'Week 9', sequence_id: 9, color: 'bg-cyan-100' },
+          { label: 'Week 10', sequence_id: 10, color: 'bg-lime-100' },
+          { label: 'Monthly', sequence_id: 15, color: 'bg-red-100' },
           { label: 'Total Subscribers', sequence_id: 'total', color: 'bg-gray-100' }
         ].map(card => {
           const stat = sequenceStats.find(s => s.sequence_id === card.sequence_id) || { total_contacts: 0 };
@@ -345,7 +358,7 @@ const ContactsSection = () => {
   };
 
   const formatSequence = (sequence) => {
-    if (sequence >= 1 && sequence <= 6) {
+    if (sequence >= 1 && sequence <= 10) {
       return `Week ${sequence}`;
     }
     return 'Monthly';
@@ -570,9 +583,9 @@ const ContactsSection = () => {
               className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
             >
               <option value="all">All Sequences</option>
-              {[1, 2, 3, 4, 5, 6, 9].map((seq) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15].map((seq) => (
                 <option key={seq} value={seq.toString()}>
-                  {seq === 9 ? 'Monthly' : `Week ${seq}`}
+                  {seq === 15 ? 'Monthly' : `Week ${seq}`}
                 </option>
               ))}
             </select>
@@ -875,7 +888,7 @@ const EmailSequencesSection = () => {
   ];
 
   const getSequenceLabel = (sequenceId) => {
-    if (sequenceId >= 1 && sequenceId <= 6) {
+    if (sequenceId >= 1 && sequenceId <= 10) {
       return `Week ${sequenceId}`;
     }
     return 'Monthly';
