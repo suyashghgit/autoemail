@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from .. import models, schemas
 from ..database import get_db
 from pydantic import HttpUrl, validator
@@ -9,11 +9,38 @@ router = APIRouter(
     tags=["sequences"]
 )
 
-@router.get("/", response_model=List[schemas.SequenceMapping])
+# Update the schema to handle nullable fields
+class SequenceMapping(schemas.SequenceMapping):
+    email_body: Optional[str] = ''  # Default empty string if NULL
+    article_link: Optional[str] = ''  # Default empty string if NULL
+
+@router.get("/", response_model=List[SequenceMapping])
 def get_sequences(db: Session = Depends(get_db)):
     """Get all sequence mappings"""
-    sequences = db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
-    return sequences
+    # Initialize default sequences if they don't exist
+    default_sequences = [
+        {"sequence_id": i, "email_body": "", "article_link": ""}
+        for i in list(range(1, 11)) + [15]  # Weeks 1-10 and Monthly (15)
+    ]
+    
+    # Get existing sequences
+    existing_sequences = db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
+    existing_ids = {seq.sequence_id for seq in existing_sequences}
+    
+    # Add any missing default sequences
+    for default_seq in default_sequences:
+        if default_seq["sequence_id"] not in existing_ids:
+            db_sequence = models.SequenceMapping(**default_seq)
+            db.add(db_sequence)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating default sequences: {e}")
+    
+    # Return all sequences
+    return db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
 
 @router.get("/{sequence_id}", response_model=schemas.SequenceMapping)
 def get_sequence(sequence_id: int, db: Session = Depends(get_db)):

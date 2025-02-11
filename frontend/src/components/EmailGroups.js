@@ -74,6 +74,13 @@ const EmailGroups = () => {
     }
   };
 
+  const getGroupName = (sequenceId) => {
+    if (sequenceId === 15) {
+      return "Monthly Group";
+    }
+    return `Week ${sequenceId} Group`;
+  };
+
   if (loading) return (
     <div className="flex justify-center items-center h-64">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-700"></div>
@@ -99,7 +106,7 @@ const EmailGroups = () => {
                   <Mail className="h-6 w-6 text-red-700" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold">{group.group_name}</h3>
+                  <h3 className="text-xl font-semibold">{getGroupName(group.sequence_id)}</h3>
                   <p className="text-gray-600">{group.contact_count} contacts</p>
                 </div>
               </div>
