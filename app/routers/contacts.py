@@ -29,11 +29,14 @@ def create_contact(contact: ContactCreate, db: Session = Depends(get_db)):
         
         # Create new contact
         new_contact = models.Contact(
-            user_id=next_id,  # Explicitly set the next ID
+            user_id=next_id,
             first_name=contact.first_name,
             last_name=contact.last_name,
             email_address=contact.email_address,
-            email_sequence=1,  # Start with sequence 1
+            company_name=contact.company_name,
+            phone_number=contact.phone_number,
+            linkedin_url=contact.linkedin_url,
+            email_sequence=1,
             join_date=datetime.now(),
             last_email_sent_at=datetime.now()
         )

@@ -202,3 +202,18 @@ CREATE INDEX idx_email_metrics_contact_id ON email_metrics(contact_id);
 
 -- Create an index on sent_at for better date range queries
 CREATE INDEX idx_email_metrics_sent_at ON email_metrics(sent_at);
+
+
+
+CREATE TABLE mailing_list (
+    user_id SERIAL PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email_address VARCHAR(255) NOT NULL,
+    company_name VARCHAR(255),
+    phone_number VARCHAR(20),
+    linkedin_url VARCHAR(255),
+    email_sequence INTEGER DEFAULT 0,
+    join_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    last_email_sent_at TIMESTAMP WITH TIME ZONE NOT NULL
+);

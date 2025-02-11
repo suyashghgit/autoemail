@@ -246,7 +246,10 @@ const ContactsSection = () => {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    email_address: ''
+    email_address: '',
+    company_name: '',
+    phone_number: '',
+    linkedin_url: ''
   });
   const [formError, setFormError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
@@ -320,7 +323,10 @@ const ContactsSection = () => {
       setFormData({
         first_name: '',
         last_name: '',
-        email_address: ''
+        email_address: '',
+        company_name: '',
+        phone_number: '',
+        linkedin_url: ''
       });
       setShowForm(false);
       
@@ -406,6 +412,45 @@ const ContactsSection = () => {
                 className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Company Name
+              </label>
+              <input
+                type="text"
+                name="company_name"
+                value={formData.company_name}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  LinkedIn Profile
+                </label>
+                <input
+                  type="url"
+                  name="linkedin_url"
+                  value={formData.linkedin_url}
+                  onChange={handleInputChange}
+                  placeholder="https://linkedin.com/in/..."
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
             {formError && (
               <div className="text-red-500 text-sm">{formError}</div>
             )}
@@ -426,9 +471,10 @@ const ContactsSection = () => {
               <th className="p-3 text-left">User ID</th>
               <th className="p-3 text-left">Name</th>
               <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Company</th>
               <th className="p-3 text-left">Sequence</th>
               <th className="p-3 text-left">Join Date</th>
-              <th className="p-3 text-left">Last Email Sent</th>
+              <th className="p-3 text-left">Last Email</th>
             </tr>
           </thead>
           <tbody>
@@ -437,9 +483,14 @@ const ContactsSection = () => {
                 <td className="p-3">{contact.user_id}</td>
                 <td className="p-3">{`${contact.first_name} ${contact.last_name}`}</td>
                 <td className="p-3">{contact.email_address}</td>
+                <td className="p-3">{contact.company_name || '-'}</td>
                 <td className="p-3">{formatSequence(contact.email_sequence)}</td>
-                <td className="p-3">{new Date(contact.join_date).toLocaleDateString()}</td>
-                <td className="p-3">{new Date(contact.last_email_sent_at).toLocaleDateString()}</td>
+                <td className="p-3">
+                  {contact.join_date ? new Date(contact.join_date).toLocaleDateString() : '-'}
+                </td>
+                <td className="p-3">
+                  {contact.last_email_sent_at ? new Date(contact.last_email_sent_at).toLocaleDateString() : '-'}
+                </td>
               </tr>
             ))}
           </tbody>
