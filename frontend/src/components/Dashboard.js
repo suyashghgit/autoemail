@@ -67,13 +67,13 @@ const Dashboard = () => {
 const DashboardContent = () => {
   const [sequenceStats, setSequenceStats] = useState([
     // Default stats structure to prevent errors if API fails
-    { sequence: 1, count: 0 },
-    { sequence: 2, count: 0 },
-    { sequence: 3, count: 0 },
-    { sequence: 4, count: 0 },
-    { sequence: 5, count: 0 },
-    { sequence: 6, count: 0 },
-    { sequence: 9, count: 0 }  // Changed from 7 to 9 for monthly
+    { sequence_id: 1, sequence_name: 'Week 1', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 2, sequence_name: 'Week 2', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 3, sequence_name: 'Week 3', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 4, sequence_name: 'Week 4', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 5, sequence_name: 'Week 5', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 6, sequence_name: 'Week 6', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 9, sequence_name: 'Monthly', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 }
   ]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -109,27 +109,27 @@ const DashboardContent = () => {
       {/* Sequence Distribution Cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Week 1', sequence: 1, color: 'bg-blue-100' },
-          { label: 'Week 2', sequence: 2, color: 'bg-green-100' },
-          { label: 'Week 3', sequence: 3, color: 'bg-yellow-100' },
-          { label: 'Week 4', sequence: 4, color: 'bg-purple-100' },
-          { label: 'Week 5', sequence: 5, color: 'bg-pink-100' },
-          { label: 'Week 6', sequence: 6, color: 'bg-indigo-100' },
-          { label: 'Monthly', sequence: 9, color: 'bg-red-100' },  // Changed from 7 to 9
-          { label: 'Total Subscribers', sequence: 'total', color: 'bg-gray-100' }
+          { label: 'Week 1', sequence_id: 1, color: 'bg-blue-100' },
+          { label: 'Week 2', sequence_id: 2, color: 'bg-green-100' },
+          { label: 'Week 3', sequence_id: 3, color: 'bg-yellow-100' },
+          { label: 'Week 4', sequence_id: 4, color: 'bg-purple-100' },
+          { label: 'Week 5', sequence_id: 5, color: 'bg-pink-100' },
+          { label: 'Week 6', sequence_id: 6, color: 'bg-indigo-100' },
+          { label: 'Monthly', sequence_id: 9, color: 'bg-red-100' },
+          { label: 'Total Subscribers', sequence_id: 'total', color: 'bg-gray-100' }
         ].map(card => {
-          const stat = sequenceStats.find(s => s.sequence === card.sequence) || { count: 0 };
-          const count = card.sequence === 'total' 
-            ? sequenceStats.reduce((acc, curr) => acc + curr.count, 0)
-            : stat.count;
+          const stat = sequenceStats.find(s => s.sequence_id === card.sequence_id) || { total_contacts: 0 };
+          const count = card.sequence_id === 'total' 
+            ? sequenceStats.reduce((acc, curr) => acc + curr.total_contacts, 0)
+            : stat.total_contacts;
 
           return (
             <div key={card.label} className={`p-5 rounded-lg ${card.color}`}>
               <h3 className="text-sm font-medium">{card.label}</h3>
               <p className="text-2xl font-bold">{count}</p>
-              {card.sequence !== 'total' && (
+              {card.sequence_id !== 'total' && (
                 <p className="text-sm text-gray-600">
-                  {((count / sequenceStats.reduce((acc, curr) => acc + curr.count, 0)) * 100).toFixed(1)}%
+                  {((count / sequenceStats.reduce((acc, curr) => acc + curr.total_contacts, 0)) * 100).toFixed(1)}%
                 </p>
               )}
             </div>
@@ -142,13 +142,13 @@ const DashboardContent = () => {
         <h3 className="text-xl font-semibold mb-4">Sequence Distribution</h3>
         <div className="space-y-3">
           {sequenceStats
-            .filter(stat => stat.sequence !== 'total')
+            .filter(stat => stat.sequence_id !== 'total')
             .map(stat => {
-              const percentage = (stat.count / sequenceStats.reduce((acc, curr) => acc + curr.count, 0)) * 100;
+              const percentage = (stat.total_contacts / sequenceStats.reduce((acc, curr) => acc + curr.total_contacts, 0)) * 100;
               return (
-                <div key={stat.sequence} className="flex items-center">
+                <div key={stat.sequence_id} className="flex items-center">
                   <span className="w-24">
-                    {stat.sequence === 9 ? 'Monthly' : `Week ${stat.sequence}`}
+                    {stat.sequence_name}
                   </span>
                   <div className="flex-1 bg-gray-200 rounded-full h-4">
                     <div 
@@ -157,7 +157,7 @@ const DashboardContent = () => {
                     ></div>
                   </div>
                   <span className="ml-3 w-32">
-                    {stat.count} ({percentage.toFixed(1)}%)
+                    {stat.total_contacts} ({percentage.toFixed(1)}%)
                   </span>
                 </div>
               );

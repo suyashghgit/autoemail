@@ -13,28 +13,36 @@ router = APIRouter(
 async def get_dashboard_stats(db: Session = Depends(get_db)):
     """Get statistics about number of contacts in each sequence"""
     stats = db.query(
-        models.Contact.email_sequence.label('sequence'),
-        func.count().label('count')
+        models.Contact.email_sequence.label('sequence_id'),
+        func.count().label('total_contacts')
     ).group_by(
         models.Contact.email_sequence
     ).order_by(
         models.Contact.email_sequence
     ).all()
     
-    # Convert SQLAlchemy result to list of dicts and ensure all sequences are represented
-    sequence_counts = {stat.sequence: stat.count for stat in stats}
-    
-    # Initialize with all possible sequences (1-6 for weeks, 9 for monthly)
-    all_sequences = []
+    # Convert SQLAlchemy result to list of SequenceStats
+    sequence_stats = []
     for seq in range(1, 7):  # Weeks 1-6
-        all_sequences.append({
-            "sequence": seq,
-            "count": sequence_counts.get(seq, 0)
+        stat = next((s for s in stats if s.sequence_id == seq), None)
+        sequence_stats.append({
+            "sequence_id": seq,
+            "sequence_name": f"Week {seq}",
+            "total_contacts": stat.total_contacts if stat else 0,
+            "completed_contacts": 0,  # You can add these calculations later
+            "pending_contacts": stat.total_contacts if stat else 0,
+            "success_rate": 0.0  # You can add this calculation later
         })
+    
     # Add monthly (sequence 9)
-    all_sequences.append({
-        "sequence": 9,
-        "count": sequence_counts.get(9, 0)
+    stat = next((s for s in stats if s.sequence_id == 9), None)
+    sequence_stats.append({
+        "sequence_id": 9,
+        "sequence_name": "Monthly",
+        "total_contacts": stat.total_contacts if stat else 0,
+        "completed_contacts": 0,
+        "pending_contacts": stat.total_contacts if stat else 0,
+        "success_rate": 0.0
     })
     
-    return all_sequences 
+    return sequence_stats 

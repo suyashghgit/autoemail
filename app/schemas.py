@@ -39,3 +39,14 @@ class SequenceMapping(SequenceMappingBase):
 
     class Config:
         from_attributes = True 
+
+class SequenceStats(BaseModel):
+    sequence_id: int
+    sequence_name: str
+    total_contacts: int
+    completed_contacts: int
+    pending_contacts: int
+    success_rate: float
+
+    class Config:
+        from_attributes = True 
