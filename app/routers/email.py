@@ -33,6 +33,9 @@ async def fetch_article_content(url: str) -> str:
                 # Return a default message instead of raising an exception
                 return f"""
                 <div class='blog-content'>
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                    </div>
                     <p>The article content is currently unavailable. Please visit 
                     <a href="{url}">the article page</a> directly to read the full content.</p>
                 </div>
@@ -66,11 +69,19 @@ async def fetch_article_content(url: str) -> str:
                     if href and not href.startswith(('http://', 'https://')):
                         a['href'] = f"{base_url.rstrip('/')}/{href.lstrip('/')}"
                 
-                return str(article_content)
+                return f"""
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                </div>
+                {str(article_content)}
+                """
             
             # If blog-content div not found, return a default message
             return f"""
             <div class='blog-content'>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                </div>
                 <p>The article content could not be extracted. Please visit 
                 <a href="{url}">the article page</a> directly to read the full content.</p>
             </div>
@@ -80,6 +91,9 @@ async def fetch_article_content(url: str) -> str:
         print(f"Error fetching article content: {str(e)}")
         return f"""
         <div class='blog-content'>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+            </div>
             <p>The article content is temporarily unavailable. Please visit 
             <a href="{url}">the article page</a> directly to read the full content.</p>
         </div>
