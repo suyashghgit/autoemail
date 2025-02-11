@@ -54,8 +54,8 @@ def update_sequence(
     # Convert the sequence dict and ensure article_link is stored as string
     update_data = sequence.dict()
     if 'article_link' in update_data:
-        # Add http:// prefix if no protocol is specified
-        article_link = update_data['article_link']
+        # Convert HttpUrl to string and handle the prefix
+        article_link = str(update_data['article_link'])
         if article_link and not article_link.startswith(('http://', 'https://')):
             article_link = f'http://{article_link}'
         update_data['article_link'] = article_link

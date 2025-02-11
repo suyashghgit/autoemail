@@ -144,6 +144,7 @@ const EmailSequencesSection = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
   const [editForm, setEditForm] = useState({
     email_body: '',
     article_link: ''
@@ -174,10 +175,36 @@ const EmailSequencesSection = () => {
     });
   };
 
+  const validateForm = () => {
+    const errors = {};
+    
+    // Validate email body
+    if (!editForm.email_body.trim()) {
+      errors.email_body = 'Email body cannot be empty';
+    }
+
+    // Validate article link if it's not empty
+    if (editForm.article_link.trim()) {
+      try {
+        new URL(editForm.article_link);
+      } catch (e) {
+        errors.article_link = 'Please enter a valid URL (e.g., https://example.com)';
+      }
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSave = async (sequenceId) => {
+    if (!validateForm()) {
+      return; // Stop if validation fails
+    }
+
     try {
       await axios.put(`http://localhost:8000/sequences/${sequenceId}`, editForm);
       setEditingId(null);
+      setFormErrors({});
       fetchSequences(); // Refresh the sequences
     } catch (err) {
       setError(err.message);
@@ -189,6 +216,13 @@ const EmailSequencesSection = () => {
       ...editForm,
       [e.target.name]: e.target.value
     });
+    // Clear error for this field when user starts typing
+    if (formErrors[e.target.name]) {
+      setFormErrors({
+        ...formErrors,
+        [e.target.name]: null
+      });
+    }
   };
 
   const getSequenceLabel = (sequenceId) => {
@@ -224,8 +258,13 @@ const EmailSequencesSection = () => {
                     name="article_link"
                     value={editForm.article_link}
                     onChange={handleChange}
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-red-500 ${
+                      formErrors.article_link ? 'border-red-500' : ''
+                    }`}
                   />
+                  {formErrors.article_link && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.article_link}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -236,8 +275,13 @@ const EmailSequencesSection = () => {
                     value={editForm.email_body}
                     onChange={handleChange}
                     rows={4}
-                    className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-red-500 ${
+                      formErrors.email_body ? 'border-red-500' : ''
+                    }`}
                   />
+                  {formErrors.email_body && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.email_body}</p>
+                  )}
                 </div>
                 <button
                   onClick={() => handleSave(sequence.sequence_id)}
