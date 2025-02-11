@@ -64,24 +64,109 @@ const Dashboard = () => {
   );
 };
 
-const DashboardContent = () => (
-  <div>
-    <h2 className="text-3xl font-bold mb-6">Dashboard Overview</h2>
-    <div className="grid grid-cols-4 gap-4">
-      {[
-        { label: 'Total Emails Sent', value: '245', color: 'bg-red-100' },
-        { label: 'Successful Deliveries', value: '236', color: 'bg-green-100' },
-        { label: 'Failed Deliveries', value: '9', color: 'bg-yellow-100' },
-        { label: 'Open Rate', value: '42.3%', color: 'bg-blue-100' }
-      ].map(card => (
-        <div key={card.label} className={`p-5 rounded-lg ${card.color}`}>
-          <h3 className="text-sm font-medium">{card.label}</h3>
-          <p className="text-2xl font-bold">{card.value}</p>
-        </div>
-      ))}
+const DashboardContent = () => {
+  const [sequenceStats, setSequenceStats] = useState([
+    // Default stats structure to prevent errors if API fails
+    { sequence: 1, count: 0 },
+    { sequence: 2, count: 0 },
+    { sequence: 3, count: 0 },
+    { sequence: 4, count: 0 },
+    { sequence: 5, count: 0 },
+    { sequence: 6, count: 0 },
+    { sequence: 9, count: 0 }  // Changed from 7 to 9 for monthly
+  ]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchSequenceStats = async () => {
+      try {
+        const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/dashboard_stats`);
+        setSequenceStats(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to fetch sequence stats:', err);
+        setError('Unable to load sequence statistics. Please try again later.');
+        setLoading(false);
+      }
+    };
+
+    fetchSequenceStats();
+  }, []);
+
+  if (loading) return <div className="text-center p-4">Loading stats...</div>;
+  if (error) return (
+    <div className="bg-red-50 text-red-500 p-4 rounded-lg">
+      <p>{error}</p>
+      <p className="text-sm mt-2">Using default values for demonstration.</p>
     </div>
-  </div>
-);
+  );
+
+  return (
+    <div>
+      <h2 className="text-3xl font-bold mb-6">Dashboard Overview</h2>
+      
+      {/* Sequence Distribution Cards */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {[
+          { label: 'Week 1', sequence: 1, color: 'bg-blue-100' },
+          { label: 'Week 2', sequence: 2, color: 'bg-green-100' },
+          { label: 'Week 3', sequence: 3, color: 'bg-yellow-100' },
+          { label: 'Week 4', sequence: 4, color: 'bg-purple-100' },
+          { label: 'Week 5', sequence: 5, color: 'bg-pink-100' },
+          { label: 'Week 6', sequence: 6, color: 'bg-indigo-100' },
+          { label: 'Monthly', sequence: 9, color: 'bg-red-100' },  // Changed from 7 to 9
+          { label: 'Total Subscribers', sequence: 'total', color: 'bg-gray-100' }
+        ].map(card => {
+          const stat = sequenceStats.find(s => s.sequence === card.sequence) || { count: 0 };
+          const count = card.sequence === 'total' 
+            ? sequenceStats.reduce((acc, curr) => acc + curr.count, 0)
+            : stat.count;
+
+          return (
+            <div key={card.label} className={`p-5 rounded-lg ${card.color}`}>
+              <h3 className="text-sm font-medium">{card.label}</h3>
+              <p className="text-2xl font-bold">{count}</p>
+              {card.sequence !== 'total' && (
+                <p className="text-sm text-gray-600">
+                  {((count / sequenceStats.reduce((acc, curr) => acc + curr.count, 0)) * 100).toFixed(1)}%
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Visual Distribution Bar */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h3 className="text-xl font-semibold mb-4">Sequence Distribution</h3>
+        <div className="space-y-3">
+          {sequenceStats
+            .filter(stat => stat.sequence !== 'total')
+            .map(stat => {
+              const percentage = (stat.count / sequenceStats.reduce((acc, curr) => acc + curr.count, 0)) * 100;
+              return (
+                <div key={stat.sequence} className="flex items-center">
+                  <span className="w-24">
+                    {stat.sequence === 9 ? 'Monthly' : `Week ${stat.sequence}`}
+                  </span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-4">
+                    <div 
+                      className="bg-red-500 h-4 rounded-full transition-all duration-500"
+                      style={{ width: `${percentage}%` }}
+                    ></div>
+                  </div>
+                  <span className="ml-3 w-32">
+                    {stat.count} ({percentage.toFixed(1)}%)
+                  </span>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ContactsSection = () => {
   const [contacts, setContacts] = useState([]);
@@ -157,7 +242,7 @@ const EmailSequencesSection = () => {
 
   const fetchSequences = async () => {
     try {
-      const response = await axios.get('http://localhost:8000/sequences');
+      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/sequences`);
       // Sort sequences by sequence_id to maintain order
       const sortedSequences = response.data.sort((a, b) => a.sequence_id - b.sequence_id);
       setSequences(sortedSequences);
@@ -207,7 +292,10 @@ const EmailSequencesSection = () => {
     }
 
     try {
-      await axios.put(`http://localhost:8000/sequences/${sequenceId}`, editForm);
+      await axios.put(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/sequences/${sequenceId}`, 
+        editForm
+      );
       setEditingId(null);
       setFormErrors({});
       fetchSequences();

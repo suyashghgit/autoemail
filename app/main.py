@@ -25,11 +25,12 @@ app.add_middleware(
 )
 
 # Include routers
-from app.routers import auth, email, contacts, sequences
+from app.routers import auth, email, contacts, sequences, dashboard
 app.include_router(auth.router)
 app.include_router(email.router)
 app.include_router(contacts.router)
 app.include_router(sequences.router, prefix="/sequences")
+app.include_router(dashboard.router)
 
 @app.get("/")
 async def root():
