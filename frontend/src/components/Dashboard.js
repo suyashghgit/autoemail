@@ -195,8 +195,6 @@ const DashboardContent = () => {
                 <th className="px-6 py-3 text-left">Sequence</th>
                 <th className="px-6 py-3 text-left">Sent</th>
                 <th className="px-6 py-3 text-left">Delivery Rate</th>
-                <th className="px-6 py-3 text-left">Open Rate</th>
-                <th className="px-6 py-3 text-left">Bounce Rate</th>
               </tr>
             </thead>
             <tbody>
@@ -216,33 +214,11 @@ const DashboardContent = () => {
                         {metric.delivery_rate}%
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                          <div
-                            className="bg-blue-600 h-2.5 rounded-full"
-                            style={{ width: `${metric.open_rate}%` }}
-                          ></div>
-                        </div>
-                        {metric.open_rate}%
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                          <div
-                            className="bg-red-600 h-2.5 rounded-full"
-                            style={{ width: `${metric.bounce_rate}%` }}
-                          ></div>
-                        </div>
-                        {metric.bounce_rate}%
-                      </div>
-                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="3" className="px-6 py-4 text-center text-gray-500">
                     No email metrics available for the last 30 days
                   </td>
                 </tr>

@@ -56,7 +56,8 @@ class SequenceStats(BaseModel):
     total_contacts: int
     completed_contacts: int
     pending_contacts: int
-    success_rate: float
+    delivery_rate: float
+    success_rate: Optional[float] = 0.0  # Make it optional with default value
 
     class Config:
         from_attributes = True 

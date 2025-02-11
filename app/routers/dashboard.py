@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import case, func
 from typing import List
+from datetime import datetime, timedelta
 from .. import models, schemas
 from ..database import get_db
 
@@ -29,9 +30,10 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
             "sequence_id": seq,
             "sequence_name": f"Week {seq}",
             "total_contacts": stat.total_contacts if stat else 0,
-            "completed_contacts": 0,  # You can add these calculations later
+            "completed_contacts": 0,
             "pending_contacts": stat.total_contacts if stat else 0,
-            "success_rate": 0.0  # You can add this calculation later
+            "delivery_rate": 0.0,
+            "success_rate": 0.0
         })
     
     # Add monthly (sequence 9)
@@ -42,7 +44,43 @@ async def get_dashboard_stats(db: Session = Depends(get_db)):
         "total_contacts": stat.total_contacts if stat else 0,
         "completed_contacts": 0,
         "pending_contacts": stat.total_contacts if stat else 0,
+        "delivery_rate": 0.0,
         "success_rate": 0.0
     })
     
     return sequence_stats 
+
+@router.get("/email_metrics")
+async def get_email_metrics(db: Session = Depends(get_db)):
+    """Get email delivery metrics for the last 30 days"""
+    # Calculate the date 30 days ago
+    thirty_days_ago = datetime.now() - timedelta(days=30)
+    
+    metrics = db.query(
+        models.EmailMetric.sequence_id,
+        func.count().label('total_sent'),
+        func.avg(case(
+            (models.EmailMetric.status == 'delivered', 100.0),
+            else_=0.0
+        )).label('delivery_rate')
+    ).filter(
+        models.EmailMetric.sent_at >= thirty_days_ago
+    ).group_by(
+        models.EmailMetric.sequence_id
+    ).all()
+    
+    # Format the results
+    result = []
+    for metric in metrics:
+        sequence_name = "Monthly" if metric.sequence_id == 9 else f"Week {metric.sequence_id}"
+        result.append({
+            "sequence_id": metric.sequence_id,
+            "sequence_name": sequence_name,
+            "total_sent": metric.total_sent,
+            "delivery_rate": round(metric.delivery_rate or 0, 1)
+        })
+    
+    # Sort by sequence_id
+    result.sort(key=lambda x: x["sequence_id"])
+    
+    return result 
