@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from .. import models, schemas
 from ..database import get_db
+from pydantic import HttpUrl, validator
 
 router = APIRouter(
     prefix="",
@@ -12,7 +13,7 @@ router = APIRouter(
 @router.get("/", response_model=List[schemas.SequenceMapping])
 def get_sequences(db: Session = Depends(get_db)):
     """Get all sequence mappings"""
-    sequences = db.query(models.SequenceMapping).all()
+    sequences = db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
     return sequences
 
 @router.get("/{sequence_id}", response_model=schemas.SequenceMapping)
@@ -50,7 +51,16 @@ def update_sequence(
     if db_sequence is None:
         raise HTTPException(status_code=404, detail="Sequence not found")
     
-    for key, value in sequence.dict().items():
+    # Convert the sequence dict and ensure article_link is stored as string
+    update_data = sequence.dict()
+    if 'article_link' in update_data:
+        # Add http:// prefix if no protocol is specified
+        article_link = update_data['article_link']
+        if article_link and not article_link.startswith(('http://', 'https://')):
+            article_link = f'http://{article_link}'
+        update_data['article_link'] = article_link
+    
+    for key, value in update_data.items():
         setattr(db_sequence, key, value)
     
     db.commit()

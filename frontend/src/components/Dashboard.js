@@ -143,21 +143,53 @@ const EmailSequencesSection = () => {
   const [sequences, setSequences] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({
+    email_body: '',
+    article_link: ''
+  });
 
   useEffect(() => {
-    const fetchSequences = async () => {
-      try {
-        const response = await axios.get('http://localhost:8000/sequences');
-        setSequences(response.data);
-        setLoading(false);
-      } catch (err) {
-        setError(err.message);
-        setLoading(false);
-      }
-    };
-
     fetchSequences();
   }, []);
+
+  const fetchSequences = async () => {
+    try {
+      const response = await axios.get('http://localhost:8000/sequences');
+      // Sort sequences by sequence_id to maintain order
+      const sortedSequences = response.data.sort((a, b) => a.sequence_id - b.sequence_id);
+      setSequences(sortedSequences);
+      setLoading(false);
+    } catch (err) {
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (sequence) => {
+    setEditingId(sequence.sequence_id);
+    setEditForm({
+      email_body: sequence.email_body,
+      article_link: sequence.article_link
+    });
+  };
+
+  const handleSave = async (sequenceId) => {
+    try {
+      await axios.put(`http://localhost:8000/sequences/${sequenceId}`, editForm);
+      setEditingId(null);
+      fetchSequences(); // Refresh the sequences
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleChange = (e) => {
+    setEditForm({
+      ...editForm,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const getSequenceLabel = (sequenceId) => {
     if (sequenceId >= 1 && sequenceId <= 6) {
@@ -181,19 +213,62 @@ const EmailSequencesSection = () => {
             <h3 className="text-xl font-semibold mb-3">
               {getSequenceLabel(sequence.sequence_id)}
             </h3>
-            <div className="mb-4">
-              <a 
-                href={sequence.article_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 underline"
-              >
-                View Article
-              </a>
-            </div>
-            <div className="text-gray-600">
-              <p className="line-clamp-3">{sequence.email_body}</p>
-            </div>
+            {editingId === sequence.sequence_id ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Article Link
+                  </label>
+                  <input
+                    type="url"
+                    name="article_link"
+                    value={editForm.article_link}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Body
+                  </label>
+                  <textarea
+                    name="email_body"
+                    value={editForm.email_body}
+                    onChange={handleChange}
+                    rows={4}
+                    className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+                <button
+                  onClick={() => handleSave(sequence.sequence_id)}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                >
+                  Save
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <a 
+                    href={sequence.article_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline"
+                  >
+                    View Article
+                  </a>
+                </div>
+                <div className="text-gray-600">
+                  <p className="line-clamp-3">{sequence.email_body}</p>
+                </div>
+                <button
+                  onClick={() => handleEdit(sequence)}
+                  className="mt-4 text-red-600 hover:text-red-800"
+                >
+                  Edit
+                </button>
+              </>
+            )}
           </div>
         ))}
       </div>
