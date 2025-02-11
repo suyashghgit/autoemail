@@ -145,6 +145,7 @@ const EmailSequencesSection = () => {
   const [error, setError] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [formErrors, setFormErrors] = useState({});
+  const [successMessage, setSuccessMessage] = useState('');
   const [editForm, setEditForm] = useState({
     email_body: '',
     article_link: ''
@@ -197,17 +198,27 @@ const EmailSequencesSection = () => {
   };
 
   const handleSave = async (sequenceId) => {
+    // Clear previous messages
+    setError(null);
+    setSuccessMessage('');
+
     if (!validateForm()) {
-      return; // Stop if validation fails
+      return;
     }
 
     try {
       await axios.put(`http://localhost:8000/sequences/${sequenceId}`, editForm);
       setEditingId(null);
       setFormErrors({});
-      fetchSequences(); // Refresh the sequences
+      fetchSequences();
+      setSuccessMessage('Sequence updated successfully!');
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+      }, 3000);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.detail || err.message || 'An error occurred while saving');
     }
   };
 
@@ -238,6 +249,19 @@ const EmailSequencesSection = () => {
   return (
     <div>
       <h2 className="text-3xl font-bold mb-6">Email Sequences</h2>
+      
+      {/* Notification Messages */}
+      {successMessage && (
+        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-md">
+          {successMessage}
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+          Error: {error}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sequences.map((sequence) => (
           <div 
