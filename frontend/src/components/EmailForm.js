@@ -33,7 +33,12 @@ const EmailForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await sendEmail(formData);
+      const formDataWithLineBreaks = {
+        ...formData,
+        body: formData.body.replace(/\n/g, '<br>')
+      };
+      
+      await sendEmail(formDataWithLineBreaks);
       setNotification({
         open: true,
         message: 'Email sent successfully!',

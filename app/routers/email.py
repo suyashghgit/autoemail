@@ -125,6 +125,10 @@ async def send_email(
         </div>
         """
         
+        # The email body already contains <br> tags from frontend
+        # We need to preserve whitespace and line breaks
+        email_body = f'<div style="white-space: pre-line;">{email.body}</div>'
+        
         # Combine message body with logo, signature and disclaimer in HTML format
         full_message = f"""
         <html>
@@ -136,14 +140,18 @@ async def send_email(
                         color: #333;
                         line-height: 1.6;
                     }}
+                    .email-body {{
+                        white-space: pre-line;
+                        margin-bottom: 1em;
+                    }}
                 </style>
             </head>
             <body>
                 <div style="text-align: center; margin-bottom: 20px;">
                     <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
                 </div>
-                <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
-                    {email.body}
+                <div class="email-body" style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                    {email_body}
                 </div>
                 {fixed_message}
                 <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
