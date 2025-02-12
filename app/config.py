@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     REDIRECT_URI: str = "http://localhost:8000/auth/callback"
     CLIENT_ID: str
     CLIENT_SECRET: str
+    
+    # Login credentials
+    USERNAME: str = "admin"
+    PASSWORD: str = "admin"  # In production, use proper password hashing
 
     class Config:
         env_file = ".env"

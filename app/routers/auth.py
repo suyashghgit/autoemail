@@ -5,11 +5,20 @@ from app.config import Settings
 import os
 from app.dependencies import get_settings
 import json
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from app.config import settings
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 # Add this line at the top of the file
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # To allow HTTP for local development
+
+security = HTTPBasic()
+
+class LoginCredentials(BaseModel):
+    username: str
+    password: str
 
 @router.get("/gmail")
 async def gmail_auth(request: Request, settings: Settings = Depends(get_settings)):
@@ -108,3 +117,13 @@ async def get_valid_credentials(settings: Settings):
     except Exception as e:
         print(f"Error refreshing credentials: {str(e)}")
         return None 
+
+@router.post("/login")
+async def login(credentials: LoginCredentials):
+    if (credentials.username == settings.USERNAME and 
+        credentials.password == settings.PASSWORD):
+        return {"status": "success"}
+    raise HTTPException(
+        status_code=401,
+        detail="Invalid credentials"
+    ) 
