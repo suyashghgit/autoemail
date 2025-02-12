@@ -216,30 +216,100 @@ const DashboardContent = () => {
                 <th className="px-6 py-3 text-left">Sequence</th>
                 <th className="px-6 py-3 text-left">Sent</th>
                 <th className="px-6 py-3 text-left">Delivery Rate</th>
+                <th className="px-6 py-3 text-left">Details</th>
               </tr>
             </thead>
             <tbody>
               {emailMetrics.length > 0 ? (
                 emailMetrics.map((metric) => (
-                  <tr key={metric.sequence_id} className="border-b">
-                    <td className="px-6 py-4">{metric.sequence_name}</td>
-                    <td className="px-6 py-4">{metric.total_sent}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                          <div
-                            className="bg-green-600 h-2.5 rounded-full"
-                            style={{ width: `${metric.delivery_rate}%` }}
-                          ></div>
+                  <React.Fragment key={metric.sequence_id}>
+                    <tr className="border-b">
+                      <td className="px-6 py-4">{metric.sequence_name}</td>
+                      <td className="px-6 py-4">{metric.total_sent}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                            <div
+                              className="bg-green-600 h-2.5 rounded-full"
+                              style={{ width: `${metric.delivery_rate}%` }}
+                            ></div>
+                          </div>
+                          {metric.delivery_rate}%
                         </div>
-                        {metric.delivery_rate}%
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => {
+                            const row = document.getElementById(`details-${metric.sequence_id}`);
+                            if (row) {
+                              row.classList.toggle('hidden');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                    <tr id={`details-${metric.sequence_id}`} className="hidden bg-gray-50">
+                      <td colSpan="4" className="px-6 py-4">
+                        <div className="space-y-4">
+                          {/* Successful Deliveries */}
+                          <div>
+                            <h4 className="font-semibold text-green-700 mb-2">
+                              Successful Deliveries ({metric.successful_deliveries?.length || 0})
+                            </h4>
+                            {metric.successful_deliveries?.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-4">
+                                {metric.successful_deliveries.map((delivery, index) => (
+                                  <div key={index} className="bg-green-50 p-3 rounded">
+                                    <p className="text-sm">
+                                      <span className="font-medium">To:</span> {delivery.recipient}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      <span className="font-medium">Sent:</span> {new Date(delivery.sent_at).toLocaleString()}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600">No successful deliveries</p>
+                            )}
+                          </div>
+
+                          {/* Failed Deliveries */}
+                          <div>
+                            <h4 className="font-semibold text-red-700 mb-2">
+                              Failed Deliveries ({metric.failed_deliveries?.length || 0})
+                            </h4>
+                            {metric.failed_deliveries?.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-4">
+                                {metric.failed_deliveries.map((delivery, index) => (
+                                  <div key={index} className="bg-red-50 p-3 rounded">
+                                    <p className="text-sm">
+                                      <span className="font-medium">To:</span> {delivery.recipient}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      <span className="font-medium">Attempted:</span> {new Date(delivery.attempted_at).toLocaleString()}
+                                    </p>
+                                    <p className="text-sm text-red-600">
+                                      <span className="font-medium">Error:</span> {delivery.error_message}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600">No failed deliveries</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="3" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
                     No email metrics available for the last 30 days
                   </td>
                 </tr>
