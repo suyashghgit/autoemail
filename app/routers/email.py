@@ -182,10 +182,12 @@ async def send_email(
         # Get signature and disclaimer text
         try:
             signature = get_template("signature")
+            signature_bottom = get_template("signature_bottom")
             disclaimer = get_template("disclaimer")
         except FileNotFoundError as e:
             print(f"Template error: {str(e)}")
             signature = ""
+            signature_bottom = ""
             disclaimer = ""
         
         # Get absolute path to logo file
@@ -202,8 +204,6 @@ async def send_email(
         # Fixed message with dynamic link and embedded article
         fixed_message = f"""
         <div style="margin: 20px 0;">
-            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">Let's clear up your business's issues and protect what you've built.</p>
-            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><strong>Contact us today to learn how the US Observer can deliver results.</strong></p>
             <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><strong>Click <a href="{email.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong></p>
         </div>
         <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
@@ -234,10 +234,10 @@ async def send_email(
                 <div class="email-body">
                     {email_body}
                 </div>
-                {fixed_message}
                 <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
                     {signature}
                 </div>
+                {fixed_message}
                 <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px;">
                     {disclaimer}
                 </div>
