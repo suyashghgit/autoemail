@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
@@ -6,11 +6,21 @@ from .. import models
 from ..database import get_db
 from ..schemas import ContactCreate
 from typing import List
+from ..services import PeopleService
+from ..dependencies import get_credentials, get_settings
+from google.oauth2.credentials import Credentials
+from ..config import Settings
 
 router = APIRouter()
 
 @router.post("/contacts")
-def create_contact(contact: ContactCreate, db: Session = Depends(get_db)):
+def create_contact(
+    contact: ContactCreate, 
+    request: Request,
+    db: Session = Depends(get_db),
+    credentials: Credentials = Depends(get_credentials),
+    settings: Settings = Depends(get_settings)
+):
     # Check if email already exists
     existing_contact = db.query(models.Contact).filter(
         models.Contact.email_address == contact.email_address
@@ -27,7 +37,7 @@ def create_contact(contact: ContactCreate, db: Session = Depends(get_db)):
         max_id = db.query(func.max(models.Contact.user_id)).scalar() or 0
         next_id = max_id + 1
         
-        # Create new contact
+        # Create new contact in database
         new_contact = models.Contact(
             user_id=next_id,
             first_name=contact.first_name,
@@ -44,6 +54,17 @@ def create_contact(contact: ContactCreate, db: Session = Depends(get_db)):
         db.add(new_contact)
         db.commit()
         db.refresh(new_contact)
+
+        # Only attempt Google Contacts creation if enabled
+        if settings.ENABLE_GOOGLE_CONTACTS:
+            try:
+                people_service = PeopleService(credentials)
+                google_contact = people_service.create_contact(contact)
+                if google_contact:
+                    print("Successfully created Google contact")
+            except Exception as e:
+                print(f"Failed to create Google contact: {str(e)}")
+
         return new_contact
         
     except Exception as e:

@@ -60,4 +60,36 @@ class GmailService:
                 userId=user_id, body=message).execute()
             return sent_message
         except Exception as e:
-            raise Exception(f"Failed to send email: {str(e)}") 
+            raise Exception(f"Failed to send email: {str(e)}")
+
+class PeopleService:
+    def __init__(self, credentials):
+        self.service = build('people', 'v1', credentials=credentials)
+
+    def create_contact(self, contact_data):
+        try:
+            # Check if credentials have the required scope
+            if "https://www.googleapis.com/auth/contacts" not in self.service._credentials.scopes:
+                print("Warning: People API scope not available. Contact will not be created in Google Contacts.")
+                return None
+
+            # Rest of the contact creation code...
+            body = {
+                "names": [{
+                    "givenName": contact_data.first_name,
+                    "familyName": contact_data.last_name
+                }],
+                "emailAddresses": [{
+                    "value": contact_data.email_address,
+                    "type": "work"
+                }]
+            }
+            
+            # ... existing code for optional fields ...
+
+            result = self.service.people().createContact(body=body).execute()
+            return result
+        except Exception as e:
+            # Log the error but don't raise it
+            print(f"Failed to create contact in Google: {str(e)}")
+            return None 
