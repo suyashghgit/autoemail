@@ -39,11 +39,9 @@ apscheduler
 # Testing
 pytest
 pytest-asyncio
-httpx
-python-jose==3.3.0
-google-api-python-client
-google-auth-httplib2
-google-auth-oauthlib
-beautifulsoup4
 
-itsdangerous
+# Google Cloud
+google-cloud-pubsub
+
+# Utilities
+extract

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  backend:
+    build: 
+      context: ..
+      dockerfile: app/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - CLIENT_SECRETS_FILE=${CLIENT_SECRETS_FILE}
+      - REDIRECT_URI=${REDIRECT_URI}
+      - CLIENT_ID=${CLIENT_ID}
+      - CLIENT_SECRET=${CLIENT_SECRET}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - EMAIL_REPLY_TO=${EMAIL_REPLY_TO}
+      - BACKEND_URL=${BACKEND_URL}
+      - USERNAME=${USERNAME}
+      - PASSWORD=${PASSWORD}
+    volumes:
+      - ..:/app
+      - ../token.json:/app/token.json
+    network_mode: "host"
+
+volumes:
+  postgres_data: 
