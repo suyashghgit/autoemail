@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import httpx
+import asyncio
 
 app = FastAPI()
 
@@ -62,16 +63,29 @@ async def send_scheduled_emails():
     except Exception as e:
         print("Error sending scheduled emails:", str(e))
 
+# Function to send scheduled emails
+def send_scheduled_emails_wrapper():
+    """Wrapper function to run the async scheduled emails function"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(send_scheduled_emails())
+    finally:
+        loop.close()
+
 # Add the Tuesday schedule
 scheduler.add_job(
-    send_scheduled_emails,
+    send_scheduled_emails_wrapper,  # Use the wrapper function instead
     trigger=CronTrigger(
-        day_of_week='tue',  # Every Tuesday
-        hour=9,  # At 9 AM
-        minute=0
+        day_of_week='tue',  # Run on Tuesdays
+        hour=10,            # At 10 AM
+        minute=0,           # At 0 minutes
+        timezone='MST'      # Mountain Standard Time
     ),
     id='send_tuesday_emails',
-    name='Send group emails every Tuesday'
+    name='Send group emails every Tuesday at 10 AM MST',
+    misfire_grace_time=None,
+    coalesce=True
 )
 
 @app.on_event("startup")

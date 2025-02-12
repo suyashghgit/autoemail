@@ -14,6 +14,7 @@ from sqlalchemy import func
 from typing import List
 from app.schemas import EmailGroup
 from urllib.parse import urlparse
+import asyncio
 
 router = APIRouter(
     tags=["email"]  # Remove the prefix
@@ -554,4 +555,18 @@ async def schedule_group_emails(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to process scheduled group emails: {str(e)}"
-        ) 
+        )
+
+# Function to send scheduled emails
+async def send_scheduled_emails():
+    """Send emails to all active groups every Tuesday"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:8000/schedule-group-emails"
+            )
+            print("Response:", response.json())
+            return response
+    except Exception as e:
+        print("Error sending scheduled emails:", str(e))
+        raise 
