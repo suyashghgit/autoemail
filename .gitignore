@@ -202,3 +202,12 @@ frontend/.env
 
 # Node modules
 node_modules/
+
+# Frontend environment files
+frontend/.env.production
+frontend/.env.development
+frontend/.env.local
+frontend/.env
+
+# Node modules
+node_modules/
