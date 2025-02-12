@@ -505,6 +505,63 @@ const ContactsSection = () => {
     }
   };
 
+  // Add this new function to handle CSV export
+  const exportToCSV = () => {
+    // Headers matching Gmail's template (only including fields we have)
+    const headers = [
+      'First Name',
+      'Last Name',
+      'E-mail 1 - Value',
+      'Phone 1 - Value',
+      'Organization Name',
+      'Website 1 - Value', // For LinkedIn URL
+      'Notes',
+      'Labels'
+    ].join(',');
+
+    // Convert contacts to CSV rows
+    const csvRows = contacts.map(contact => {
+      // Escape fields that might contain commas
+      const escapeCsvField = (field) => {
+        if (!field) return '';
+        // If field contains comma or newline, wrap in quotes
+        if (field.includes(',') || field.includes('\n') || field.includes('"')) {
+          return `"${field.replace(/"/g, '""')}"`;
+        }
+        return field;
+      };
+
+      const row = [
+        escapeCsvField(contact.first_name),
+        escapeCsvField(contact.last_name),
+        escapeCsvField(contact.email_address),
+        escapeCsvField(contact.phone_number),
+        escapeCsvField(contact.company_name),
+        escapeCsvField(contact.linkedin_url),
+        escapeCsvField(contact.notes),
+        'US Observer Contact' // Label all contacts with this
+      ].join(',');
+
+      return row;
+    });
+
+    // Combine headers and rows
+    const csvContent = [headers, ...csvRows].join('\n');
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'us_observer_contacts.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   if (loading) return <div className="p-4">Loading contacts...</div>;
   if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
 
@@ -625,9 +682,9 @@ const ContactsSection = () => {
         </div>
       )}
 
-      {/* Search and Filter Controls */}
+      {/* Search and Filter Controls - Updated */}
       <div className="bg-white shadow rounded-lg p-4 mb-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search Input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -659,6 +716,19 @@ const ContactsSection = () => {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* Export Button */}
+          <div className="flex items-end">
+            <button
+              onClick={exportToCSV}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+              Export to CSV
+            </button>
           </div>
 
           {/* Results Count */}
