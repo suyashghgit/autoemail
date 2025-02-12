@@ -30,6 +30,7 @@ class SequenceMapping(Base):
     sequence_id = Column(Integer, primary_key=True)
     email_body = Column(Text, nullable=True)
     article_link = Column(String, nullable=True)
+    email_subject = Column(String(255), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
 class EmailMetric(Base):

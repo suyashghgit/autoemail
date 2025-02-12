@@ -777,7 +777,8 @@ const EmailSequencesSection = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [editForm, setEditForm] = useState({
     email_body: '',
-    article_link: ''
+    article_link: '',
+    email_subject: ''
   });
 
   useEffect(() => {
@@ -801,20 +802,28 @@ const EmailSequencesSection = () => {
     setEditingId(sequence.sequence_id);
     setEditForm({
       email_body: sequence.email_body,
-      article_link: sequence.article_link
+      article_link: sequence.article_link,
+      email_subject: sequence.email_subject || ''
     });
   };
 
   const validateForm = () => {
     const errors = {};
     
+    // Validate email subject
+    if (!editForm.email_subject?.trim()) {
+      errors.email_subject = 'Email subject is required';
+    }
+    
     // Validate email body
-    if (!editForm.email_body.trim()) {
-      errors.email_body = 'Email body cannot be empty';
+    if (!editForm.email_body?.trim()) {
+      errors.email_body = 'Email body is required';
     }
 
-    // Validate article link if it's not empty
-    if (editForm.article_link.trim()) {
+    // Validate article link
+    if (!editForm.article_link?.trim()) {
+      errors.article_link = 'Article link is required';
+    } else {
       try {
         new URL(editForm.article_link);
       } catch (e) {
@@ -845,12 +854,30 @@ const EmailSequencesSection = () => {
       fetchSequences();
       setSuccessMessage('Sequence updated successfully!');
       
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage('');
       }, 3000);
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'An error occurred while saving');
+      // Handle backend validation errors
+      if (err.response?.data) {
+        const backendErrors = Array.isArray(err.response.data) ? err.response.data : [err.response.data];
+        const newFormErrors = {};
+        
+        backendErrors.forEach(error => {
+          if (error.loc && error.loc[1]) {
+            const field = error.loc[1];
+            newFormErrors[field] = error.msg;
+          }
+        });
+        
+        if (Object.keys(newFormErrors).length > 0) {
+          setFormErrors(newFormErrors);
+        } else {
+          setError('An error occurred while saving');
+        }
+      } else {
+        setError('An error occurred while saving');
+      }
     }
   };
 
@@ -909,7 +936,7 @@ const EmailSequencesSection = () => {
       )}
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-          Error: {error}
+          {error}
         </div>
       )}
 
@@ -924,6 +951,23 @@ const EmailSequencesSection = () => {
             </h3>
             {editingId === sequence.sequence_id ? (
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Subject
+                  </label>
+                  <input
+                    type="text"
+                    name="email_subject"
+                    value={editForm.email_subject}
+                    onChange={handleChange}
+                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-red-500 ${
+                      formErrors.email_subject ? 'border-red-500' : ''
+                    }`}
+                  />
+                  {formErrors.email_subject && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.email_subject}</p>
+                  )}
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Article Link
@@ -945,7 +989,7 @@ const EmailSequencesSection = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email Body
                   </label>
-                  <div className="h-64">
+                  <div className={`h-64 ${formErrors.email_body ? 'border border-red-500 rounded' : ''}`}>
                     <ReactQuill
                       theme="snow"
                       value={editForm.email_body}
@@ -954,6 +998,13 @@ const EmailSequencesSection = () => {
                           ...editForm,
                           email_body: content
                         });
+                        // Clear error when user starts typing
+                        if (formErrors.email_body) {
+                          setFormErrors({
+                            ...formErrors,
+                            email_body: null
+                          });
+                        }
                       }}
                       modules={modules}
                       formats={formats}
@@ -973,15 +1024,21 @@ const EmailSequencesSection = () => {
               </div>
             ) : (
               <>
-                <div className="mb-4">
-                  <a 
-                    href={sequence.article_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
-                  >
-                    View Article
-                  </a>
+                <div className="mb-4 space-y-2">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Subject:</label>
+                    <p className="text-gray-800">{sequence.email_subject || 'No subject set'}</p>
+                  </div>
+                  <div>
+                    <a 
+                      href={sequence.article_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      View Article
+                    </a>
+                  </div>
                 </div>
                 <div className="text-gray-600">
                   <div 

@@ -26,6 +26,17 @@ def get_template(template_name):
 
 async def fetch_article_content(url: str) -> str:
     """Fetch and extract the main content from the article URL"""
+    # Handle empty or None URL
+    if not url or not url.strip():
+        return """
+        <div class='blog-content'>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+            </div>
+            <p>No article link provided.</p>
+        </div>
+        """
+        
     try:
         # Add timeout and follow_redirects parameters
         async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
@@ -297,96 +308,150 @@ async def send_email(
 
 @router.post("/send-group")
 async def send_group_email(
-    group_email: GroupEmailSchema,
+    email: GroupEmailSchema,
     request: Request,
     db: Session = Depends(get_db),
     credentials: dict = Depends(get_credentials)
 ):
     try:
-        print(f"Received request for sequence_id: {group_email.sequence_id}")
-        
-        # Get sequence mapping data
-        sequence_mapping = db.query(models.SequenceMapping).filter(
-            models.SequenceMapping.sequence_id == group_email.sequence_id
+        # Get the sequence mapping
+        sequence = db.query(models.SequenceMapping).filter(
+            models.SequenceMapping.sequence_id == email.sequence_id
         ).first()
         
-        if not sequence_mapping:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No sequence mapping found for sequence_id: {group_email.sequence_id}"
-            )
-
-        # Handle null or empty article_link
-        article_link = sequence_mapping.article_link or ""
-        if article_link and not article_link.startswith(('http://', 'https://')):
-            article_link = f'https://{article_link}'
+        if not sequence:
+            raise HTTPException(status_code=404, detail="Sequence not found")
         
-        # Track results
-        results = {
-            "successful": [],
-            "failed": []
-        }
-
-        # Get all contacts
+        # Get all contacts for this sequence
         contacts = db.query(models.Contact).filter(
-            models.Contact.email_sequence == group_email.sequence_id
+            models.Contact.email_sequence == email.sequence_id
         ).all()
         
         if not contacts:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No contacts found in sequence {group_email.sequence_id}"
-            )
+            raise HTTPException(status_code=404, detail="No contacts found for this sequence")
 
-        # Update group_email with sequence mapping data
-        group_email.body = sequence_mapping.email_body
-        
-        # Send email to each contact
+        successful_sends = 0
+        failed_sends = 0
+
         for contact in contacts:
             try:
-                # Create EmailSchema for each contact
-                email = EmailSchema(
-                    recipient=contact.email_address,
-                    subject=group_email.subject,
-                    body=f"Dear {contact.first_name},\n\n{group_email.body}",
-                    article_link=article_link,
-                    contact_id=contact.user_id,
-                    sequence_id=group_email.sequence_id
+                # Get signature and disclaimer text
+                try:
+                    signature = get_template("signature")
+                    signature_bottom = get_template("signature_bottom")
+                    disclaimer = get_template("disclaimer")
+                except FileNotFoundError as e:
+                    print(f"Template error: {str(e)}")
+                    signature = ""
+                    signature_bottom = ""
+                    disclaimer = ""
+                
+                # Get absolute path to logo file
+                logo_path = os.path.abspath(os.path.join("app", "templates", "logo.png"))
+                
+                if not os.path.exists(logo_path):
+                    raise FileNotFoundError(f"Logo file not found at: {logo_path}")
+                
+                # Fetch article content
+                article_content = await fetch_article_content(str(sequence.article_link))
+                
+                # Use sequence email body and subject
+                email_body = f"Dear {contact.first_name},\n\n{sequence.email_body}"
+                email_subject = sequence.email_subject or "US Observer Update"
+                
+                # Create the full message
+                fixed_message = f"""
+                <div style="margin: 20px 0;">
+                    <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                        <strong>Click <a href="{sequence.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong>
+                    </p>
+                </div>
+                <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+                    {article_content}
+                    {signature_bottom}
+                </div>
+                """
+                
+                full_message = f"""
+                <html>
+                    <head>
+                        <style>
+                            body {{
+                                font-family: Arial, sans-serif;
+                                font-size: 14px;
+                                color: #333;
+                                line-height: 1.6;
+                            }}
+                            .email-body {{
+                                margin-bottom: 1em;
+                            }}
+                        </style>
+                    </head>
+                    <body>
+                        <div class="email-body">
+                            {email_body}
+                        </div>
+                        <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                            {signature}
+                        </div>
+                        {fixed_message}
+                        <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px;">
+                            {disclaimer}
+                        </div>
+                    </body>
+                </html>
+                """
+                
+                gmail_service = GmailService(credentials)
+                message = gmail_service.create_message(
+                    to=contact.email_address,
+                    subject=email_subject,
+                    message_text=full_message,
+                    image_path=logo_path
                 )
+                result = gmail_service.send_message(message)
                 
-                # Use the existing send_email function
-                result = await send_email(email, request, db, credentials)
+                # Record successful email metric
+                metric = models.EmailMetric(
+                    contact_id=contact.user_id,
+                    sequence_id=email.sequence_id,
+                    message_id=result.get("id"),
+                    status="delivered",
+                    sent_at=datetime.now()
+                )
+                db.add(metric)
+                successful_sends += 1
                 
-                # Update last_email_sent_at
+                # Update contact's last_email_sent_at
                 contact.last_email_sent_at = datetime.now()
-                db.commit()
-                
-                results["successful"].append({
-                    "email": contact.email_address,
-                    "message_id": result["message_id"]
-                })
-                
+                db.add(contact)
+
             except Exception as e:
                 print(f"Failed to send email to {contact.email_address}: {str(e)}")
-                results["failed"].append({
-                    "email": contact.email_address,
-                    "error": str(e)
-                })
+                # Record failed email metric
+                metric = models.EmailMetric(
+                    contact_id=contact.user_id,
+                    sequence_id=email.sequence_id,
+                    message_id=None,
+                    status="failed",
+                    sent_at=datetime.now()
+                )
+                db.add(metric)
+                failed_sends += 1
 
+        db.commit()
+        
         return {
-            "message": f"Completed sending group emails for sequence {group_email.sequence_id}",
-            "total_contacts": len(contacts),
-            "successful_sends": len(results["successful"]),
-            "failed_sends": len(results["failed"]),
-            "details": results
+            "message": "Group email process completed",
+            "successful_sends": successful_sends,
+            "failed_sends": failed_sends
         }
 
     except Exception as e:
-        print(f"Global error: {str(e)}")
-        db.rollback()
+        print(f"Error in group email: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to send group emails: {str(e)}"
+            detail=f"Failed to process group email: {str(e)}"
         )
 
 @router.get("/email_groups", response_model=List[schemas.EmailGroup])
