@@ -2,10 +2,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyc
-**/__pycache__/
-**/*.py[cod]
-**/*.pyc
 
 # C extensions
 *.so
@@ -177,18 +173,16 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Python cache files - consolidated and expanded
+# Python cache files - consolidated
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyc
-**/__pycache__/
-**/*.py[cod]
-**/*.pyc
 app/__pycache__/
 app/**/__pycache__/
 app/routers/__pycache__/
-.env
+*.pyc
+app/__pycache__/*.pyc
+app/routers/__pycache__/*.pyc
 
 # Virtual environment
 venv/
@@ -199,6 +193,13 @@ frontend/node_modules/.package-lock.json
 
 # Node modules specific files
 frontend/node_modules/@babel/plugin-proposal-private-property-in-object/
+
+# Google API credentials and tokens
+client_secret.json
+token.json
+credentials.json
+*.credentials.json
+*token*.json
 
 # env files
 .env.local
