@@ -393,7 +393,7 @@ const ContactsSection = () => {
             `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/send`,
             {
               recipient: formData.email_address,
-              subject: "Welcome to US Observer",
+              subject: week1Sequence.email_subject,
               body: `Dear ${formData.first_name},\n\n${week1Sequence.email_body}`,
               article_link: week1Sequence.article_link,
               contact_id: response.data.user_id,
