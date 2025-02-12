@@ -32,17 +32,48 @@ def extract_email_info(email_body: str) -> str:
         raise ValueError(f"Failed to extract email: {str(e)}")
 
 @router.post("/zapier_status")
-async def update_email_status(email_body: schemas.EmailBody):
+async def update_email_status(email_body: schemas.EmailBody, db: Session = Depends(get_db)):
     try:
-        # Extract information from the email body
-        email_info = extract_email_info(email_body.email_body)
+        email_address = extract_email_info(email_body.email_body)
+        if not email_address:
+            raise HTTPException(
+                status_code=400,
+                detail="Could not extract email address from the email body"
+            )
+        
+        # Updated to use Contact model with correct primary key name
+        contact = db.query(models.Contact).filter(
+            models.Contact.email_address == email_address
+        ).first()
+        
+        if not contact:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Email address {email_address} not found in contacts"
+            )
+        
+        latest_message = db.query(models.EmailMetric).filter(
+            models.EmailMetric.contact_id == contact.user_id  # Changed from contact.id to contact.user_id
+        ).order_by(desc(models.EmailMetric.sent_at)).first()
+        
+        if not latest_message:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No messages found for contact_id {contact.user_id}"  # Changed from contact.id to contact.user_id
+            )
+        
+        latest_message.status = "failed"
+        db.commit()
         
         return {
-            "message": "Email body processed successfully",
-            "request_body": email_body.email_body,  # Include the original request body
-            "extracted_info": email_info
+            "message": "Email status updated successfully",
+            "email_address": email_address,
+            "contact_id": contact.user_id,  # Changed from contact.id to contact.user_id
+            "message_id": latest_message.message_id
         }
             
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(
             status_code=500,
