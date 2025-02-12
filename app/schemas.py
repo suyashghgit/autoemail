@@ -99,3 +99,22 @@ class ActiveWeek(BaseModel):
 
     class Config:
         from_attributes = True 
+
+class EmailStatusUpdate(BaseModel):
+    email_address: EmailStr
+    status: str
+    message_id: Optional[str] = None
+    error_message: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email_address": "example@email.com",
+                "status": "bounced",
+                "message_id": "12345",
+                "error_message": "Mailbox full"
+            }
+        } 
+
+class EmailBody(BaseModel):
+    email_body: str 

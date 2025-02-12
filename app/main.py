@@ -58,13 +58,14 @@ async def shutdown_scheduler():
     scheduler.shutdown()
 
 # Include routers
-from app.routers import auth, email, contacts, sequences, dashboard, weeks
+from app.routers import auth, email, contacts, sequences, dashboard, weeks, zapier_status
 app.include_router(auth.router)
 app.include_router(email.router)
 app.include_router(contacts.router)
 app.include_router(sequences.router, prefix="/sequences")
 app.include_router(dashboard.router)
 app.include_router(weeks.router)
+app.include_router(zapier_status.router)
 
 @app.get("/")
 async def root():
