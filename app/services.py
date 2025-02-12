@@ -4,6 +4,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 import base64
 import os
+from email.utils import make_msgid, formatdate
 
 class GmailService:
     def __init__(self, credentials):
@@ -13,6 +14,13 @@ class GmailService:
         message = MIMEMultipart('related')
         message['to'] = to
         message['subject'] = subject
+        
+        # Add anti-spam headers
+        message['Precedence'] = 'bulk'
+        message['X-Auto-Response-Suppress'] = 'OOF, AutoReply'
+        
+        # Add a Message-ID header with your domain
+        message['Date'] = formatdate(localtime=True)
 
         # Create the HTML and alternative part
         alt_part = MIMEMultipart('alternative')
