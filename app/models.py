@@ -37,7 +37,13 @@ class EmailMetric(Base):
     __tablename__ = "email_metrics"
 
     id = Column(Integer, primary_key=True, index=True)
-    contact_id = Column(Integer, ForeignKey("mailing_list.user_id"))
+    contact_id = Column(
+        Integer, 
+        ForeignKey(
+            "mailing_list.user_id",
+            ondelete="CASCADE"
+        )
+    )
     sequence_id = Column(Integer)
     message_id = Column(String)
     status = Column(String)

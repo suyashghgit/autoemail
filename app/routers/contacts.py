@@ -96,15 +96,20 @@ def update_sequences(db: Session = Depends(get_db)):
         
         # Create a mapping of active sequences
         active_sequences = {seq.sequence_id: seq.is_active for seq in sequences}
-        now = datetime.now().date()  # Get just the date part
+        now = datetime.now().date()
         
         for contact in contacts:
-            # Convert join_date to date only
             contact_join_date = contact.join_date.date()
             
-            # Calculate days since joining (inclusive of start and end date)
-            days_since_join = (now - contact_join_date).days + 1
-            weeks_since_join = (days_since_join - 1) // 7
+            # If join date is in the future or today, set sequence to 1
+            if contact_join_date >= now:
+                if contact.email_sequence != 1:
+                    contact.email_sequence = 1
+                continue
+            
+            # Calculate weeks since joining (excluding today and future dates)
+            days_since_join = (now - contact_join_date).days
+            weeks_since_join = days_since_join // 7
             
             current_sequence = contact.email_sequence
             
