@@ -77,6 +77,11 @@ async def fetch_article_content(url: str) -> str:
                 for iframe in article_content.find_all('iframe'):
                     iframe.decompose()
                 
+                # Add padding to the first paragraph
+                first_p = article_content.find('p')
+                if first_p:
+                    first_p['style'] = 'padding-left: 20px;'  # Add 20px left padding
+                
                 # Keep all style tags and CSS classes
                 # Convert relative URLs to absolute URLs
                 base_url = urlparse(url)
@@ -139,12 +144,10 @@ async def fetch_article_content(url: str) -> str:
                 
                 # Preserve all original classes and styles
                 return f"""
-                <div class="article-container" style="max-width: 100%; margin: 0 auto; overflow: hidden;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                    <div style="text-align: left; margin-bottom: 20px;">
+                        <img src="cid:logo" alt="US Observer Logo" style="width: 100%; height: auto;">
                     </div>
                     {str(article_content)}
-                </div>
                 """
             else:
                 print("No article content found with any selector")  # Debug log
