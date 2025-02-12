@@ -193,3 +193,12 @@ frontend/node_modules/.package-lock.json
 
 # Node modules specific files
 frontend/node_modules/@babel/plugin-proposal-private-property-in-object/
+
+# Frontend environment files
+frontend/.env.production
+frontend/.env.development
+frontend/.env.local
+frontend/.env
+
+# Node modules
+node_modules/
