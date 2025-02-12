@@ -49,6 +49,31 @@ scheduler.add_job(
     name='Update email sequences daily'
 )
 
+# Function to send scheduled emails
+async def send_scheduled_emails():
+    """Send emails to all active groups every Tuesday"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "http://localhost:8000/schedule-group-emails"
+            )
+            print("Tuesday scheduled emails:", response.status_code)
+            print("Response:", response.json())
+    except Exception as e:
+        print("Error sending scheduled emails:", str(e))
+
+# Add the Tuesday schedule
+scheduler.add_job(
+    send_scheduled_emails,
+    trigger=CronTrigger(
+        day_of_week='tue',  # Every Tuesday
+        hour=9,  # At 9 AM
+        minute=0
+    ),
+    id='send_tuesday_emails',
+    name='Send group emails every Tuesday'
+)
+
 @app.on_event("startup")
 async def start_scheduler():
     scheduler.start()

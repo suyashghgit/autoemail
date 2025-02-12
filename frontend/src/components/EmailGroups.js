@@ -78,6 +78,46 @@ const EmailGroups = () => {
     }
   };
 
+  const handleScheduledEmails = async () => {
+    try {
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/schedule-group-emails`
+      );
+      
+      // Show success toast with detailed results
+      const results = response.data.results;
+      const successCount = results.filter(r => r.status === 'success').length;
+      const failCount = results.filter(r => r.status === 'failed').length;
+      
+      toast.success(
+        `Processed ${results.length} groups:\n${successCount} successful, ${failCount} failed`, 
+        {
+          duration: 5000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: 'white',
+          },
+        }
+      );
+      
+      // Refresh groups data
+      fetchGroups();
+    } catch (err) {
+      toast.error(
+        err.response?.data?.detail || 'Failed to process scheduled emails',
+        {
+          duration: 4000,
+          position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: 'white',
+          },
+        }
+      );
+    }
+  };
+
   const getGroupName = (sequenceId) => {
     if (sequenceId === 15) {
       return "Monthly Group";
@@ -99,7 +139,15 @@ const EmailGroups = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-3xl font-bold mb-6">Email Groups</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold">Email Groups</h2>
+        <button
+          onClick={handleScheduledEmails}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Send All Group Emails
+        </button>
+      </div>
       
       <div className="grid gap-6">
         {groups
