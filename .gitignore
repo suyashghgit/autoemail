@@ -169,9 +169,17 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-# Python cache files
+
+# Python cache files - consolidated
 __pycache__/
 *.py[cod]
+*$py.class
+app/__pycache__/
+app/**/__pycache__/
+app/routers/__pycache__/
+*.pyc
+app/__pycache__/*.pyc
+app/routers/__pycache__/*.pyc
 
 # Virtual environment
 venv/
