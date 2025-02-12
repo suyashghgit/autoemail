@@ -182,3 +182,9 @@ frontend/node_modules/.package-lock.json
 
 # Node modules specific files
 frontend/node_modules/@babel/plugin-proposal-private-property-in-object/
+
+# Specific pycache directories
+app/__pycache__/
+app/routers/__pycache__/
+app/*/__pycache__/
+*.pyc
