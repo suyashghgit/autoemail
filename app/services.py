@@ -10,10 +10,12 @@ class GmailService:
     def __init__(self, credentials):
         self.service = build('gmail', 'v1', credentials=credentials)
 
-    def create_message(self, to: str, subject: str, message_text: str, image_path: str = None):
+    def create_message(self, to: str, subject: str, message_text: str, image_path: str = None, reply_to: str = None):
         message = MIMEMultipart('related')
         message['to'] = to
         message['subject'] = subject
+        if reply_to:
+            message['reply-to'] = reply_to
         
         # Add anti-spam headers
         message['Precedence'] = 'bulk'

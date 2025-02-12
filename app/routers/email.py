@@ -266,7 +266,8 @@ async def send_email(
             to=email.recipient,
             subject=email.subject,
             message_text=full_message,
-            image_path=logo_path
+            image_path=logo_path,
+            reply_to="Michael@USObserver.com"
         )
         result = gmail_service.send_message(message)
         
@@ -408,7 +409,8 @@ async def send_group_email(
                     to=contact.email_address,
                     subject=email_subject,
                     message_text=full_message,
-                    image_path=logo_path
+                    image_path=logo_path,
+                    reply_to="Michael@USObserver.com"
                 )
                 result = gmail_service.send_message(message)
                 
