@@ -15,7 +15,7 @@ class SequenceMapping(schemas.SequenceMapping):
     article_link: Optional[str] = ''  # Default empty string if NULL
 
 @router.get("/", response_model=List[SequenceMapping])
-def get_sequences(db: Session = Depends(get_db)):
+async def get_sequences(db: Session = Depends(get_db)):
     """Get all sequence mappings"""
     # Initialize default sequences if they don't exist
     default_sequences = [
@@ -30,7 +30,7 @@ def get_sequences(db: Session = Depends(get_db)):
     ]
     
     # Get existing sequences
-    existing_sequences = db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
+    existing_sequences = await db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
     existing_ids = {seq.sequence_id for seq in existing_sequences}
     
     # Add any missing default sequences
@@ -40,13 +40,13 @@ def get_sequences(db: Session = Depends(get_db)):
             db.add(db_sequence)
     
     try:
-        db.commit()
+        await db.commit()
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         print(f"Error creating default sequences: {e}")
     
     # Return all sequences
-    sequences = db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
+    sequences = await db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
     
     # Ensure email_subject is never None
     for sequence in sequences:
