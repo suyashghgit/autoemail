@@ -7,3 +7,6 @@ Create a real .env file based on the .env.example template and fill in your actu
 To test the basic setup, run the FastAPI application:
 
 uvicorn app.main:app --reload
+
+
+sendgrid - 9f397ee582e82daa96fd4cc90085b2cb-1654a412-3ec4901e

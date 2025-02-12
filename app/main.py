@@ -22,7 +22,7 @@ app.add_middleware(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,7 +36,7 @@ async def update_sequences_job():
     async with httpx.AsyncClient() as client:
         try:
             response = await client.put(
-                "http://localhost:8000/contacts/update-sequences"
+                f"{settings.BACKEND_URL}/contacts/update-sequences"
             )
             print("Sequences updated:", response.status_code)
         except Exception as e:
@@ -56,7 +56,7 @@ async def send_scheduled_emails():
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "http://localhost:8000/schedule-group-emails"
+                f"{settings.BACKEND_URL}/schedule-group-emails"
             )
             print("Tuesday scheduled emails:", response.status_code)
             print("Response:", response.json())

@@ -15,6 +15,7 @@ from typing import List
 from app.schemas import EmailGroup
 from urllib.parse import urlparse
 import asyncio
+from app.config import settings
 
 router = APIRouter(
     tags=["email"]  # Remove the prefix
@@ -267,7 +268,7 @@ async def send_email(
             subject=email.subject,
             message_text=full_message,
             image_path=logo_path,
-            reply_to="Michael@USObserver.com"
+            reply_to=settings.EMAIL_REPLY_TO
         )
         result = gmail_service.send_message(message)
         
@@ -410,7 +411,7 @@ async def send_group_email(
                     subject=email_subject,
                     message_text=full_message,
                     image_path=logo_path,
-                    reply_to="Michael@USObserver.com"
+                    reply_to=settings.EMAIL_REPLY_TO
                 )
                 result = gmail_service.send_message(message)
                 
@@ -565,7 +566,7 @@ async def send_scheduled_emails():
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                "http://localhost:8000/schedule-group-emails"
+                f"{settings.BACKEND_URL}/schedule-group-emails"
             )
             print("Response:", response.json())
             return response
