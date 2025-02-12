@@ -104,7 +104,7 @@ const DashboardContent = () => {
   useEffect(() => {
     const fetchSequenceStats = async () => {
       try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/dashboard_stats`);
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/dashboard_stats`);
         setSequenceStats(response.data);
         setLoading(false);
       } catch (err) {
