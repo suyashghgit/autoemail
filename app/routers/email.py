@@ -208,6 +208,7 @@ async def send_email(
         </div>
         <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
             {article_content}
+            {signature_bottom}
         </div>
         """
         
