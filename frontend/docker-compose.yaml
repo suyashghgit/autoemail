@@ -9,3 +9,9 @@ services:
       - .:/frontend
       - /frontend/node_modules
     command: sh -c "npm install && npm start"
+    networks:
+      - my-app-network
+
+networks:
+  my-app-network:
+    external: true

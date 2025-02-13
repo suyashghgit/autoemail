@@ -11,3 +11,9 @@ services:
       - PYTHONPATH=.
     command: >
       sh -c "uvicorn main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - my-app-network
+
+networks:
+  my-app-network:
+    external: true
