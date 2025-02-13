@@ -4,15 +4,25 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
 import base64
 import os
+from email.utils import make_msgid, formatdate
 
 class GmailService:
     def __init__(self, credentials):
         self.service = build('gmail', 'v1', credentials=credentials)
 
-    def create_message(self, to: str, subject: str, message_text: str, image_path: str = None):
+    def create_message(self, to: str, subject: str, message_text: str, image_path: str = None, reply_to: str = None):
         message = MIMEMultipart('related')
         message['to'] = to
         message['subject'] = subject
+        if reply_to:
+            message['reply-to'] = reply_to
+        
+        # Add anti-spam headers
+        message['Precedence'] = 'bulk'
+        message['X-Auto-Response-Suppress'] = 'OOF, AutoReply'
+        
+        # Add a Message-ID header with your domain
+        message['Date'] = formatdate(localtime=True)
 
         # Create the HTML and alternative part
         alt_part = MIMEMultipart('alternative')
@@ -50,4 +60,36 @@ class GmailService:
                 userId=user_id, body=message).execute()
             return sent_message
         except Exception as e:
-            raise Exception(f"Failed to send email: {str(e)}") 
+            raise Exception(f"Failed to send email: {str(e)}")
+
+class PeopleService:
+    def __init__(self, credentials):
+        self.service = build('people', 'v1', credentials=credentials)
+
+    def create_contact(self, contact_data):
+        try:
+            # Check if credentials have the required scope
+            if "https://www.googleapis.com/auth/contacts" not in self.service._credentials.scopes:
+                print("Warning: People API scope not available. Contact will not be created in Google Contacts.")
+                return None
+
+            # Rest of the contact creation code...
+            body = {
+                "names": [{
+                    "givenName": contact_data.first_name,
+                    "familyName": contact_data.last_name
+                }],
+                "emailAddresses": [{
+                    "value": contact_data.email_address,
+                    "type": "work"
+                }]
+            }
+            
+            # ... existing code for optional fields ...
+
+            result = self.service.people().createContact(body=body).execute()
+            return result
+        except Exception as e:
+            # Log the error but don't raise it
+            print(f"Failed to create contact in Google: {str(e)}")
+            return None 

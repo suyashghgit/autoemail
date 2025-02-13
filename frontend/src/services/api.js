@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000';
+const ENV = process.env.REACT_APP_ENV || 'local';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
+console.log(`Running in ${ENV} environment`);
+console.log(`API URL: ${API_URL}`);
 
 export const sendEmail = async (emailData) => {
   try {

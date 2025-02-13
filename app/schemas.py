@@ -24,6 +24,10 @@ class ContactBase(BaseModel):
     first_name: str
     last_name: str
     email_address: EmailStr
+    company_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    notes: Optional[str] = None
 
 class ContactCreate(ContactBase):
     pass
@@ -40,6 +44,8 @@ class Contact(ContactBase):
 class SequenceMappingBase(BaseModel):
     email_body: str
     article_link: HttpUrl
+    email_subject: Optional[str] = ''
+    is_active: bool = True
 
 class SequenceMappingCreate(SequenceMappingBase):
     sequence_id: int
@@ -57,14 +63,14 @@ class SequenceStats(BaseModel):
     completed_contacts: int
     pending_contacts: int
     delivery_rate: float
-    success_rate: Optional[float] = 0.0  # Make it optional with default value
+    success_rate: Optional[float] = 0.0
 
     class Config:
         from_attributes = True 
 
 class EmailGroup(BaseModel):
     sequence_id: int
-    group_name: str  # e.g., "Week 1", "Week 2", etc.
+    group_name: str
     contact_count: int
     contacts: List[Contact]
 
@@ -73,14 +79,49 @@ class EmailGroup(BaseModel):
 
 class GroupEmailSchema(BaseModel):
     sequence_id: int
-    subject: str = "Test subject"  # Default subject
-    body: str = ""  # Will be populated from sequence_mapping
-    article_link: Optional[str] = None  # Changed from HttpUrl to str
+    recipient: Optional[str] = None
+    contact_id: Optional[int] = None
+    subject: Optional[str] = None
+    body: str = ""
+    article_link: Optional[str] = None
     
     class Config:
         json_schema_extra = {
             "example": {
                 "sequence_id": 1,
-                "subject": "Test subject"
+                "subject": "Optional fallback subject"
             }
         } 
+
+class ActiveWeek(BaseModel):
+    sequence_id: int
+    is_active: bool
+
+    class Config:
+        from_attributes = True 
+
+class EmailStatusUpdate(BaseModel):
+    email_address: EmailStr
+    status: str
+    message_id: Optional[str] = None
+    error_message: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "email_address": "example@email.com",
+                "status": "bounced",
+                "message_id": "12345",
+                "error_message": "Mailbox full"
+            }
+        } 
+
+class EmailBody(BaseModel):
+    email_body: str 
+
+class OAuthCredentialsSchema(BaseModel):
+    credential_type: str
+    credentials_json: str
+    
+    class Config:
+        from_attributes = True 

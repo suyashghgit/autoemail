@@ -3,7 +3,8 @@ import {
   LayoutDashboard, 
   Users, 
   Mail,
-  UserPlus
+  UserPlus,
+  ToggleLeft
 } from 'lucide-react';
 import EmailForm from './EmailForm';
 import AuthStatus from './AuthStatus';
@@ -12,6 +13,8 @@ import axios from 'axios';
 import EmailGroups from './EmailGroups';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { toast } from 'react-hot-toast';
+import WeekSelector from './WeekSelector';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -20,7 +23,8 @@ const Dashboard = () => {
     { icon: LayoutDashboard, label: 'Dashboard', key: 'dashboard' },
     { icon: Users, label: 'Contacts', key: 'contacts' },
     { icon: Mail, label: 'Email Sequences', key: 'sequences' },
-    { icon: UserPlus, label: 'Email Groups', key: 'groups' }
+    { icon: UserPlus, label: 'Email Groups', key: 'groups' },
+    { icon: ToggleLeft, label: 'Week Selector', key: 'selector' }
   ];
 
   const renderContent = () => {
@@ -33,6 +37,8 @@ const Dashboard = () => {
         return <EmailSequencesSection />;
       case 'groups':
         return <EmailGroups />;
+      case 'selector':
+        return <WeekSelector />;
       default:
         return <DashboardContent />;
     }
@@ -78,14 +84,18 @@ const Dashboard = () => {
 
 const DashboardContent = () => {
   const [sequenceStats, setSequenceStats] = useState([
-    // Default stats structure to prevent errors if API fails
+    // Updated default stats structure
     { sequence_id: 1, sequence_name: 'Week 1', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 2, sequence_name: 'Week 2', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 3, sequence_name: 'Week 3', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 4, sequence_name: 'Week 4', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 5, sequence_name: 'Week 5', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
     { sequence_id: 6, sequence_name: 'Week 6', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
-    { sequence_id: 9, sequence_name: 'Monthly', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 }
+    { sequence_id: 7, sequence_name: 'Week 7', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 8, sequence_name: 'Week 8', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 9, sequence_name: 'Week 9', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 10, sequence_name: 'Week 10', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 },
+    { sequence_id: 15, sequence_name: 'Monthly', total_contacts: 0, completed_contacts: 0, pending_contacts: 0, success_rate: 0 }
   ]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -94,7 +104,7 @@ const DashboardContent = () => {
   useEffect(() => {
     const fetchSequenceStats = async () => {
       try {
-        const response = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/dashboard_stats`);
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/dashboard_stats`);
         setSequenceStats(response.data);
         setLoading(false);
       } catch (err) {
@@ -133,7 +143,7 @@ const DashboardContent = () => {
     <div>
       <h2 className="text-3xl font-bold mb-6">Dashboard Overview</h2>
       
-      {/* Sequence Distribution Cards */}
+      {/* Sequence Distribution Cards - Updated */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Week 1', sequence_id: 1, color: 'bg-blue-100' },
@@ -142,7 +152,11 @@ const DashboardContent = () => {
           { label: 'Week 4', sequence_id: 4, color: 'bg-purple-100' },
           { label: 'Week 5', sequence_id: 5, color: 'bg-pink-100' },
           { label: 'Week 6', sequence_id: 6, color: 'bg-indigo-100' },
-          { label: 'Monthly', sequence_id: 9, color: 'bg-red-100' },
+          { label: 'Week 7', sequence_id: 7, color: 'bg-orange-100' },
+          { label: 'Week 8', sequence_id: 8, color: 'bg-teal-100' },
+          { label: 'Week 9', sequence_id: 9, color: 'bg-cyan-100' },
+          { label: 'Week 10', sequence_id: 10, color: 'bg-lime-100' },
+          { label: 'Monthly', sequence_id: 15, color: 'bg-red-100' },
           { label: 'Total Subscribers', sequence_id: 'total', color: 'bg-gray-100' }
         ].map(card => {
           const stat = sequenceStats.find(s => s.sequence_id === card.sequence_id) || { total_contacts: 0 };
@@ -202,30 +216,100 @@ const DashboardContent = () => {
                 <th className="px-6 py-3 text-left">Sequence</th>
                 <th className="px-6 py-3 text-left">Sent</th>
                 <th className="px-6 py-3 text-left">Delivery Rate</th>
+                <th className="px-6 py-3 text-left">Details</th>
               </tr>
             </thead>
             <tbody>
               {emailMetrics.length > 0 ? (
                 emailMetrics.map((metric) => (
-                  <tr key={metric.sequence_id} className="border-b">
-                    <td className="px-6 py-4">{metric.sequence_name}</td>
-                    <td className="px-6 py-4">{metric.total_sent}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                          <div
-                            className="bg-green-600 h-2.5 rounded-full"
-                            style={{ width: `${metric.delivery_rate}%` }}
-                          ></div>
+                  <React.Fragment key={metric.sequence_id}>
+                    <tr className="border-b">
+                      <td className="px-6 py-4">{metric.sequence_name}</td>
+                      <td className="px-6 py-4">{metric.total_sent}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                            <div
+                              className="bg-green-600 h-2.5 rounded-full"
+                              style={{ width: `${metric.delivery_rate}%` }}
+                            ></div>
+                          </div>
+                          {metric.delivery_rate}%
                         </div>
-                        {metric.delivery_rate}%
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => {
+                            const row = document.getElementById(`details-${metric.sequence_id}`);
+                            if (row) {
+                              row.classList.toggle('hidden');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          View Details
+                        </button>
+                      </td>
+                    </tr>
+                    <tr id={`details-${metric.sequence_id}`} className="hidden bg-gray-50">
+                      <td colSpan="4" className="px-6 py-4">
+                        <div className="space-y-4">
+                          {/* Successful Deliveries */}
+                          <div>
+                            <h4 className="font-semibold text-green-700 mb-2">
+                              Successful Deliveries ({metric.successful_deliveries?.length || 0})
+                            </h4>
+                            {metric.successful_deliveries?.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-4">
+                                {metric.successful_deliveries.map((delivery, index) => (
+                                  <div key={index} className="bg-green-50 p-3 rounded">
+                                    <p className="text-sm">
+                                      <span className="font-medium">To:</span> {delivery.recipient}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      <span className="font-medium">Sent:</span> {new Date(delivery.sent_at).toLocaleString()}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600">No successful deliveries</p>
+                            )}
+                          </div>
+
+                          {/* Failed Deliveries */}
+                          <div>
+                            <h4 className="font-semibold text-red-700 mb-2">
+                              Failed Deliveries ({metric.failed_deliveries?.length || 0})
+                            </h4>
+                            {metric.failed_deliveries?.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-4">
+                                {metric.failed_deliveries.map((delivery, index) => (
+                                  <div key={index} className="bg-red-50 p-3 rounded">
+                                    <p className="text-sm">
+                                      <span className="font-medium">To:</span> {delivery.recipient}
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                      <span className="font-medium">Attempted:</span> {new Date(delivery.attempted_at).toLocaleString()}
+                                    </p>
+                                    <p className="text-sm text-red-600">
+                                      <span className="font-medium">Error:</span> {delivery.error_message}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-600">No failed deliveries</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  </React.Fragment>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="3" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="4" className="px-6 py-4 text-center text-gray-500">
                     No email metrics available for the last 30 days
                   </td>
                 </tr>
@@ -246,10 +330,19 @@ const ContactsSection = () => {
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
-    email_address: ''
+    email_address: '',
+    company_name: '',
+    phone_number: '',
+    linkedin_url: ''
   });
   const [formError, setFormError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+  const [editingNotes, setEditingNotes] = useState(null);
+  const [noteText, setNoteText] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState('user_id');
+  const [sortDirection, setSortDirection] = useState('asc');
+  const [sequenceFilter, setSequenceFilter] = useState('all');
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -280,6 +373,7 @@ const ContactsSection = () => {
     setSuccessMessage(null);
 
     try {
+      // Create contact
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/contacts`,
         formData
@@ -288,19 +382,183 @@ const ContactsSection = () => {
       // Add new contact to the list
       setContacts([...contacts, response.data]);
       
+      // Send initial welcome email using Week 1 sequence
+      try {
+        // Get Week 1 sequence data
+        const sequencesResponse = await axios.get(`${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/sequences`);
+        const week1Sequence = sequencesResponse.data.find(seq => seq.sequence_id === 1);
+        
+        if (week1Sequence) {
+          await axios.post(
+            `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/send`,
+            {
+              recipient: formData.email_address,
+              subject: week1Sequence.email_subject,
+              body: `Dear ${formData.first_name},\n\n${week1Sequence.email_body}`,
+              article_link: week1Sequence.article_link,
+              contact_id: response.data.user_id,
+              sequence_id: 1  // Week 1
+            }
+          );
+          setSuccessMessage('Contact added successfully and welcome email sent!');
+        } else {
+          setSuccessMessage('Contact added successfully, but Week 1 sequence not found.');
+        }
+      } catch (emailErr) {
+        console.error('Failed to send welcome email:', emailErr);
+        setSuccessMessage('Contact added successfully, but welcome email failed to send.');
+      }
+      
       // Reset form
       setFormData({
         first_name: '',
         last_name: '',
-        email_address: ''
+        email_address: '',
+        company_name: '',
+        phone_number: '',
+        linkedin_url: ''
       });
       setShowForm(false);
-      setSuccessMessage('Contact added successfully!');
       
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       setFormError(err.response?.data?.detail || 'Failed to add contact');
+    }
+  };
+
+  const formatSequence = (sequence) => {
+    if (sequence >= 1 && sequence <= 10) {
+      return `Week ${sequence}`;
+    }
+    return 'Monthly';
+  };
+
+  const handleNotesUpdate = async (contactId, notes) => {
+    try {
+      await axios.patch(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/contacts/${contactId}`,
+        { notes }
+      );
+      
+      // Update the contacts list with new notes
+      setContacts(contacts.map(contact => 
+        contact.user_id === contactId 
+          ? { ...contact, notes } 
+          : contact
+      ));
+      
+      setEditingNotes(null);
+      toast.success('Notes updated successfully');
+    } catch (err) {
+      toast.error('Failed to update notes');
+      console.error('Failed to update notes:', err);
+    }
+  };
+
+  // Filter and sort contacts
+  const filteredContacts = contacts
+    .filter(contact => {
+      // Search filter
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = 
+        contact.first_name.toLowerCase().includes(searchLower) ||
+        contact.last_name.toLowerCase().includes(searchLower) ||
+        contact.email_address.toLowerCase().includes(searchLower) ||
+        (contact.company_name || '').toLowerCase().includes(searchLower);
+
+      // Sequence filter
+      const matchesSequence = 
+        sequenceFilter === 'all' || 
+        contact.email_sequence.toString() === sequenceFilter;
+
+      return matchesSearch && matchesSequence;
+    })
+    .sort((a, b) => {
+      let aValue = a[sortField];
+      let bValue = b[sortField];
+
+      // Handle special cases for combined fields
+      if (sortField === 'full_name') {
+        aValue = `${a.first_name} ${a.last_name}`;
+        bValue = `${b.first_name} ${b.last_name}`;
+      }
+
+      // Handle date fields
+      if (sortField === 'join_date' || sortField === 'last_email_sent_at') {
+        aValue = new Date(aValue);
+        bValue = new Date(bValue);
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  // Add this before the return statement
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // Add this new function to handle CSV export
+  const exportToCSV = () => {
+    // Headers matching Gmail's template (only including fields we have)
+    const headers = [
+      'First Name',
+      'Last Name',
+      'E-mail 1 - Value',
+      'Phone 1 - Value',
+      'Organization Name',
+      'Website 1 - Value', // For LinkedIn URL
+      'Notes',
+      'Labels'
+    ].join(',');
+
+    // Convert contacts to CSV rows
+    const csvRows = contacts.map(contact => {
+      // Escape fields that might contain commas
+      const escapeCsvField = (field) => {
+        if (!field) return '';
+        // If field contains comma or newline, wrap in quotes
+        if (field.includes(',') || field.includes('\n') || field.includes('"')) {
+          return `"${field.replace(/"/g, '""')}"`;
+        }
+        return field;
+      };
+
+      const row = [
+        escapeCsvField(contact.first_name),
+        escapeCsvField(contact.last_name),
+        escapeCsvField(contact.email_address),
+        escapeCsvField(contact.phone_number),
+        escapeCsvField(contact.company_name),
+        escapeCsvField(contact.linkedin_url),
+        escapeCsvField(contact.notes),
+        'US Observer Contact' // Label all contacts with this
+      ].join(',');
+
+      return row;
+    });
+
+    // Combine headers and rows
+    const csvContent = [headers, ...csvRows].join('\n');
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'us_observer_contacts.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -372,6 +630,45 @@ const ContactsSection = () => {
                 className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Company Name
+              </label>
+              <input
+                type="text"
+                name="company_name"
+                value={formData.company_name}
+                onChange={handleInputChange}
+                className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phone_number"
+                  value={formData.phone_number}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  LinkedIn Profile
+                </label>
+                <input
+                  type="url"
+                  name="linkedin_url"
+                  value={formData.linkedin_url}
+                  onChange={handleInputChange}
+                  placeholder="https://linkedin.com/in/..."
+                  className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
             {formError && (
               <div className="text-red-500 text-sm">{formError}</div>
             )}
@@ -385,27 +682,223 @@ const ContactsSection = () => {
         </div>
       )}
 
+      {/* Search and Filter Controls - Updated */}
+      <div className="bg-white shadow rounded-lg p-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Search Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Search Contacts
+            </label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name, email, or company..."
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+            />
+          </div>
+
+          {/* Sequence Filter */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Filter by Sequence
+            </label>
+            <select
+              value={sequenceFilter}
+              onChange={(e) => setSequenceFilter(e.target.value)}
+              className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+            >
+              <option value="all">All Sequences</option>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15].map((seq) => (
+                <option key={seq} value={seq.toString()}>
+                  {seq === 15 ? 'Monthly' : `Week ${seq}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Export Button */}
+          <div className="flex items-end">
+            <button
+              onClick={exportToCSV}
+              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+              Export to CSV
+            </button>
+          </div>
+
+          {/* Results Count */}
+          <div className="flex items-end">
+            <p className="text-gray-600">
+              Showing {filteredContacts.length} of {contacts.length} contacts
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Updated Table Headers */}
       <div className="bg-white shadow rounded-lg p-6">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-100">
-              <th className="p-3 text-left">User ID</th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Email</th>
-              <th className="p-3 text-left">Sequence</th>
-              <th className="p-3 text-left">Join Date</th>
-              <th className="p-3 text-left">Last Email Sent</th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('user_id')}
+              >
+                <div className="flex items-center">
+                  User ID
+                  {sortField === 'user_id' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('full_name')}
+              >
+                <div className="flex items-center">
+                  Name
+                  {sortField === 'full_name' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('email_address')}
+              >
+                <div className="flex items-center">
+                  Email
+                  {sortField === 'email_address' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('company_name')}
+              >
+                <div className="flex items-center">
+                  Company
+                  {sortField === 'company_name' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('email_sequence')}
+              >
+                <div className="flex items-center">
+                  Sequence
+                  {sortField === 'email_sequence' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('join_date')}
+              >
+                <div className="flex items-center">
+                  Join Date
+                  {sortField === 'join_date' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th 
+                className="p-3 text-left cursor-pointer hover:bg-gray-200"
+                onClick={() => handleSort('last_email_sent_at')}
+              >
+                <div className="flex items-center">
+                  Last Email
+                  {sortField === 'last_email_sent_at' && (
+                    <span className="ml-1">
+                      {sortDirection === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
+                </div>
+              </th>
+              <th className="p-3 text-left">Notes</th>
             </tr>
           </thead>
           <tbody>
-            {contacts.map(contact => (
+            {filteredContacts.map(contact => (
               <tr key={contact.user_id} className="border-b hover:bg-gray-50">
                 <td className="p-3">{contact.user_id}</td>
                 <td className="p-3">{`${contact.first_name} ${contact.last_name}`}</td>
                 <td className="p-3">{contact.email_address}</td>
-                <td className="p-3">{contact.email_sequence}</td>
-                <td className="p-3">{new Date(contact.join_date).toLocaleDateString()}</td>
-                <td className="p-3">{new Date(contact.last_email_sent_at).toLocaleDateString()}</td>
+                <td className="p-3">{contact.company_name || '-'}</td>
+                <td className="p-3">{formatSequence(contact.email_sequence)}</td>
+                <td className="p-3">
+                  {contact.join_date ? new Date(contact.join_date).toLocaleDateString() : '-'}
+                </td>
+                <td className="p-3">
+                  {contact.last_email_sent_at ? new Date(contact.last_email_sent_at).toLocaleDateString() : '-'}
+                </td>
+                <td className="p-3">
+                  {editingNotes === contact.user_id ? (
+                    <div className="flex flex-col space-y-2">
+                      <textarea
+                        className="w-full p-2 border rounded-md focus:ring-2 focus:ring-red-500 min-h-[100px]"
+                        value={noteText}
+                        onChange={(e) => setNoteText(e.target.value)}
+                        placeholder="Enter notes here..."
+                      />
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleNotesUpdate(contact.user_id, noteText)}
+                          className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingNotes(null);
+                            setNoteText('');
+                          }}
+                          className="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div 
+                      className="group relative cursor-pointer"
+                      onClick={() => {
+                        setEditingNotes(contact.user_id);
+                        setNoteText(contact.notes || '');
+                      }}
+                    >
+                      <div className="min-h-[1.5rem] max-h-[4.5rem] overflow-hidden">
+                        {contact.notes ? (
+                          <p className="whitespace-pre-wrap">{contact.notes}</p>
+                        ) : (
+                          <p className="text-gray-400 italic">Click to add notes</p>
+                        )}
+                      </div>
+                      <div className="absolute inset-0 bg-gray-100 opacity-0 group-hover:opacity-10 transition-opacity" />
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -424,7 +917,8 @@ const EmailSequencesSection = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [editForm, setEditForm] = useState({
     email_body: '',
-    article_link: ''
+    article_link: '',
+    email_subject: ''
   });
 
   useEffect(() => {
@@ -448,20 +942,28 @@ const EmailSequencesSection = () => {
     setEditingId(sequence.sequence_id);
     setEditForm({
       email_body: sequence.email_body,
-      article_link: sequence.article_link
+      article_link: sequence.article_link,
+      email_subject: sequence.email_subject || ''
     });
   };
 
   const validateForm = () => {
     const errors = {};
     
+    // Validate email subject
+    if (!editForm.email_subject?.trim()) {
+      errors.email_subject = 'Email subject is required';
+    }
+    
     // Validate email body
-    if (!editForm.email_body.trim()) {
-      errors.email_body = 'Email body cannot be empty';
+    if (!editForm.email_body?.trim()) {
+      errors.email_body = 'Email body is required';
     }
 
-    // Validate article link if it's not empty
-    if (editForm.article_link.trim()) {
+    // Validate article link
+    if (!editForm.article_link?.trim()) {
+      errors.article_link = 'Article link is required';
+    } else {
       try {
         new URL(editForm.article_link);
       } catch (e) {
@@ -492,12 +994,30 @@ const EmailSequencesSection = () => {
       fetchSequences();
       setSuccessMessage('Sequence updated successfully!');
       
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage('');
       }, 3000);
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'An error occurred while saving');
+      // Handle backend validation errors
+      if (err.response?.data) {
+        const backendErrors = Array.isArray(err.response.data) ? err.response.data : [err.response.data];
+        const newFormErrors = {};
+        
+        backendErrors.forEach(error => {
+          if (error.loc && error.loc[1]) {
+            const field = error.loc[1];
+            newFormErrors[field] = error.msg;
+          }
+        });
+        
+        if (Object.keys(newFormErrors).length > 0) {
+          setFormErrors(newFormErrors);
+        } else {
+          setError('An error occurred while saving');
+        }
+      } else {
+        setError('An error occurred while saving');
+      }
     }
   };
 
@@ -535,7 +1055,7 @@ const EmailSequencesSection = () => {
   ];
 
   const getSequenceLabel = (sequenceId) => {
-    if (sequenceId >= 1 && sequenceId <= 6) {
+    if (sequenceId >= 1 && sequenceId <= 10) {
       return `Week ${sequenceId}`;
     }
     return 'Monthly';
@@ -556,7 +1076,7 @@ const EmailSequencesSection = () => {
       )}
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
-          Error: {error}
+          {error}
         </div>
       )}
 
@@ -571,6 +1091,23 @@ const EmailSequencesSection = () => {
             </h3>
             {editingId === sequence.sequence_id ? (
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Subject
+                  </label>
+                  <input
+                    type="text"
+                    name="email_subject"
+                    value={editForm.email_subject}
+                    onChange={handleChange}
+                    className={`w-full p-2 border rounded focus:ring-2 focus:ring-red-500 ${
+                      formErrors.email_subject ? 'border-red-500' : ''
+                    }`}
+                  />
+                  {formErrors.email_subject && (
+                    <p className="text-red-500 text-sm mt-1">{formErrors.email_subject}</p>
+                  )}
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Article Link
@@ -592,7 +1129,7 @@ const EmailSequencesSection = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email Body
                   </label>
-                  <div className="h-64">
+                  <div className={`h-64 ${formErrors.email_body ? 'border border-red-500 rounded' : ''}`}>
                     <ReactQuill
                       theme="snow"
                       value={editForm.email_body}
@@ -601,6 +1138,13 @@ const EmailSequencesSection = () => {
                           ...editForm,
                           email_body: content
                         });
+                        // Clear error when user starts typing
+                        if (formErrors.email_body) {
+                          setFormErrors({
+                            ...formErrors,
+                            email_body: null
+                          });
+                        }
                       }}
                       modules={modules}
                       formats={formats}
@@ -620,15 +1164,21 @@ const EmailSequencesSection = () => {
               </div>
             ) : (
               <>
-                <div className="mb-4">
-                  <a 
-                    href={sequence.article_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline"
-                  >
-                    View Article
-                  </a>
+                <div className="mb-4 space-y-2">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Subject:</label>
+                    <p className="text-gray-800">{sequence.email_subject || 'No subject set'}</p>
+                  </div>
+                  <div>
+                    <a 
+                      href={sequence.article_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      View Article
+                    </a>
+                  </div>
                 </div>
                 <div className="text-gray-600">
                   <div 

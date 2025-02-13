@@ -4,11 +4,12 @@ from starlette.middleware.sessions import SessionMiddleware
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 import uvicorn
-from app.config import settings
+from config import settings
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 import httpx
+import asyncio
 
 app = FastAPI()
 
@@ -21,7 +22,7 @@ app.add_middleware(
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,7 +36,7 @@ async def update_sequences_job():
     async with httpx.AsyncClient() as client:
         try:
             response = await client.put(
-                "http://localhost:8000/contacts/update-sequences"
+                f"{settings.BACKEND_URL}/contacts/update-sequences"
             )
             print("Sequences updated:", response.status_code)
         except Exception as e:
@@ -49,6 +50,44 @@ scheduler.add_job(
     name='Update email sequences daily'
 )
 
+# Function to send scheduled emails
+async def send_scheduled_emails():
+    """Send emails to all active groups every Tuesday"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{settings.BACKEND_URL}/schedule-group-emails"
+            )
+            print("Tuesday scheduled emails:", response.status_code)
+            print("Response:", response.json())
+    except Exception as e:
+        print("Error sending scheduled emails:", str(e))
+
+# Function to send scheduled emails
+def send_scheduled_emails_wrapper():
+    """Wrapper function to run the async scheduled emails function"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(send_scheduled_emails())
+    finally:
+        loop.close()
+
+# Add the Tuesday schedule
+scheduler.add_job(
+    send_scheduled_emails_wrapper,  # Use the wrapper function instead
+    trigger=CronTrigger(
+        day_of_week='tue',  # Run on Tuesdays
+        hour=10,            # At 10 AM
+        minute=0,           # At 0 minutes
+        timezone='MST'      # Mountain Standard Time
+    ),
+    id='send_tuesday_emails',
+    name='Send group emails every Tuesday at 10 AM MST',
+    misfire_grace_time=None,
+    coalesce=True
+)
+
 @app.on_event("startup")
 async def start_scheduler():
     scheduler.start()
@@ -58,16 +97,18 @@ async def shutdown_scheduler():
     scheduler.shutdown()
 
 # Include routers
-from app.routers import auth, email, contacts, sequences, dashboard
+from routers import auth, email, contacts, sequences, dashboard, weeks, zapier_status
 app.include_router(auth.router)
 app.include_router(email.router)
 app.include_router(contacts.router)
 app.include_router(sequences.router, prefix="/sequences")
 app.include_router(dashboard.router)
+app.include_router(weeks.router)
+app.include_router(zapier_status.router)
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Gmail API Service. Go to /auth/gmail to authenticate."}
+    return RedirectResponse(url=settings.FRONTEND_URL)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

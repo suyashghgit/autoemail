@@ -1,18 +1,58 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
-from .. import models, schemas
-from ..database import get_db
+from typing import List, Optional
+import models, schemas
+from database import get_db
 from pydantic import HttpUrl, validator
 
 router = APIRouter(
     tags=["sequences"]
 )
 
-@router.get("/", response_model=List[schemas.SequenceMapping])
+# Update the schema to handle nullable fields
+class SequenceMapping(schemas.SequenceMapping):
+    email_body: Optional[str] = ''  # Default empty string if NULL
+    article_link: Optional[str] = ''  # Default empty string if NULL
+
+@router.get("/", response_model=List[SequenceMapping])
 def get_sequences(db: Session = Depends(get_db)):
     """Get all sequence mappings"""
+    # Initialize default sequences if they don't exist
+    default_sequences = [
+        {
+            "sequence_id": i, 
+            "email_body": "", 
+            "article_link": "", 
+            "email_subject": "",  # Add default email subject
+            "is_active": True
+        }
+        for i in list(range(1, 11)) + [15]  # Weeks 1-10 and Monthly (15)
+    ]
+    
+    # Get existing sequences
+    existing_sequences = db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
+    existing_ids = {seq.sequence_id for seq in existing_sequences}
+    
+    # Add any missing default sequences
+    for default_seq in default_sequences:
+        if default_seq["sequence_id"] not in existing_ids:
+            db_sequence = models.SequenceMapping(**default_seq)
+            db.add(db_sequence)
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error creating default sequences: {e}")
+    
+    # Return all sequences
     sequences = db.query(models.SequenceMapping).order_by(models.SequenceMapping.sequence_id).all()
+    
+    # Ensure email_subject is never None
+    for sequence in sequences:
+        if sequence.email_subject is None:
+            sequence.email_subject = ''
+    
     return sequences
 
 @router.get("/{sequence_id}", response_model=schemas.SequenceMapping)
@@ -53,11 +93,14 @@ def update_sequence(
     # Convert the sequence dict and ensure article_link is stored as string
     update_data = sequence.dict()
     if 'article_link' in update_data:
-        # Convert HttpUrl to string and handle the prefix
         article_link = str(update_data['article_link'])
         if article_link and not article_link.startswith(('http://', 'https://')):
             article_link = f'http://{article_link}'
         update_data['article_link'] = article_link
+    
+    # Ensure email_subject is included in the update
+    if 'email_subject' in update_data:
+        update_data['email_subject'] = update_data['email_subject'].strip()
     
     for key, value in update_data.items():
         setattr(db_sequence, key, value)

@@ -19,7 +19,7 @@ const AuthStatus = () => {
   };
 
   const handleAuth = () => {
-    window.location.href = 'http://localhost:8000/auth/gmail';
+    window.location.href = `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/auth/gmail`;
   };
 
   return (
