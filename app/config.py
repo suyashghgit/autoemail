@@ -3,7 +3,6 @@ from typing import List
 
 class Settings(BaseSettings):
     # Gmail API settings
-    CLIENT_SECRETS_FILE: str
     ENABLE_GOOGLE_CONTACTS: bool = False  # Set to True only when scope is verified
     GMAIL_SEND_SCOPE: str = "https://www.googleapis.com/auth/gmail.send"
     CONTACTS_SCOPE: str = "https://www.googleapis.com/auth/contacts"

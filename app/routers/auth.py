@@ -138,12 +138,6 @@ async def get_valid_credentials(settings: Settings, db: Session = Depends(get_db
             return None
             
         credentials_dict = json.loads(token_record.credentials_json)
-        print("Credentials loaded from DB:", {  # Debug log
-            **credentials_dict,
-            'token': credentials_dict['token'][:10] + '...',  # Show only first 10 chars
-            'refresh_token': credentials_dict['refresh_token'][:10] + '...' if credentials_dict.get('refresh_token') else None,
-            'client_secret': credentials_dict['client_secret'][:10] + '...'
-        })
         
         credentials = Credentials(
             token=credentials_dict['token'],
