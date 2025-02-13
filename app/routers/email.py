@@ -16,6 +16,11 @@ from app.schemas import EmailGroup
 from urllib.parse import urlparse
 import asyncio
 from app.config import settings
+from app.routers.auth import get_authenticated_credentials
+from google.oauth2.credentials import Credentials
+from app.config import Settings
+from app.dependencies import get_settings
+from googleapiclient.discovery import build
 
 router = APIRouter(
     tags=["email"]  # Remove the prefix
@@ -311,15 +316,15 @@ async def send_email(
 
 @router.post("/send-group")
 async def send_group_email(
-    email: GroupEmailSchema,
-    request: Request,
-    db: Session = Depends(get_db),
-    credentials: dict = Depends(get_credentials)
+    email_data: GroupEmailSchema,
+    credentials: Credentials = Depends(get_authenticated_credentials),
+    settings: Settings = Depends(get_settings),
+    db: Session = Depends(get_db)
 ):
     try:
         # Get the sequence mapping
         sequence = db.query(models.SequenceMapping).filter(
-            models.SequenceMapping.sequence_id == email.sequence_id
+            models.SequenceMapping.sequence_id == email_data.sequence_id
         ).first()
         
         if not sequence:
@@ -327,7 +332,7 @@ async def send_group_email(
         
         # Get all contacts for this sequence
         contacts = db.query(models.Contact).filter(
-            models.Contact.email_sequence == email.sequence_id
+            models.Contact.email_sequence == email_data.sequence_id
         ).all()
         
         if not contacts:
@@ -418,7 +423,7 @@ async def send_group_email(
                 # Record successful email metric
                 metric = models.EmailMetric(
                     contact_id=contact.user_id,
-                    sequence_id=email.sequence_id,
+                    sequence_id=email_data.sequence_id,
                     message_id=result.get("id"),
                     status="delivered",
                     sent_at=datetime.now()
@@ -435,7 +440,7 @@ async def send_group_email(
                 # Record failed email metric
                 metric = models.EmailMetric(
                     contact_id=contact.user_id,
-                    sequence_id=email.sequence_id,
+                    sequence_id=email_data.sequence_id,
                     message_id=None,
                     status="failed",
                     sent_at=datetime.now()

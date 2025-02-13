@@ -108,7 +108,7 @@ app.include_router(zapier_status.router)
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to Gmail API Service. Go to /auth/gmail to authenticate."}
+    return RedirectResponse(url=settings.FRONTEND_URL)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

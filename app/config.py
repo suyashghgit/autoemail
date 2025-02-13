@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str
     EMAIL_REPLY_TO: str
     BACKEND_URL: str
+    FRONTEND_URL: str
     DATABASE_URL: str
     # Login credentials
     USERNAME: str
@@ -27,6 +28,7 @@ class Settings(BaseSettings):
 
     class Config:
         env_file = ".env"
+        case_sensitive = True
 
 # Create settings instance
 settings = Settings() 
