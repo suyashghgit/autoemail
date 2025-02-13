@@ -2,14 +2,14 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from google_auth_oauthlib.flow import Flow
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models import OAuthCredentials
-from app.config import Settings
+from database import get_db
+from models import OAuthCredentials
+from config import Settings
 import os
-from app.dependencies import get_settings
+from dependencies import get_settings
 import json
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from app.config import settings
+from config import settings
 from pydantic import BaseModel
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest

@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import case, func, extract
 from typing import List
 from datetime import datetime, timedelta
-from .. import models, schemas
-from ..database import get_db
+import models, schemas
+from database import get_db
 from fastapi import HTTPException
 
 router = APIRouter(

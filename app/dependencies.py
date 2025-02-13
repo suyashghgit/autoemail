@@ -3,7 +3,7 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request as GoogleRequest
 import json
 import os
-from app.config import Settings
+from config import Settings
 
 def get_settings():
     return Settings()

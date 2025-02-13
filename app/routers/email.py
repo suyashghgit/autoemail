@@ -1,26 +1,27 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
-from app import schemas
-from app.schemas import EmailSchema, GroupEmailSchema
-from app.services import GmailService
-from app.dependencies import get_credentials
+import schemas
+from schemas import EmailSchema, GroupEmailSchema
+from services import GmailService
+from dependencies import get_credentials
 import os
 import httpx
 from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models
+from database import get_db
+from models import EmailMetric, SequenceMapping, Contact
 from datetime import datetime
 from sqlalchemy import func
 from typing import List
-from app.schemas import EmailGroup
+from schemas import EmailGroup
 from urllib.parse import urlparse
 import asyncio
-from app.config import settings
-from app.routers.auth import get_authenticated_credentials
+from config import settings 
+from routers.auth import get_authenticated_credentials
 from google.oauth2.credentials import Credentials
-from app.config import Settings
-from app.dependencies import get_settings
+from config import Settings
+from dependencies import get_settings
 from googleapiclient.discovery import build
+import models
 
 router = APIRouter(
     tags=["email"]  # Remove the prefix

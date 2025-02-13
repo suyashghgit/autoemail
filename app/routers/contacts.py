@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from datetime import datetime, timedelta
-from .. import models
-from ..database import get_db
-from ..schemas import ContactCreate
+import models
+from database import get_db
+from schemas import ContactCreate
 from typing import List
-from ..services import PeopleService
-from ..dependencies import get_credentials, get_settings
+from services import PeopleService
+from dependencies import get_credentials, get_settings
 from google.oauth2.credentials import Credentials
-from ..config import Settings
+from config import Settings
 
 router = APIRouter()
 

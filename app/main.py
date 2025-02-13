@@ -4,7 +4,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 import uvicorn
-from app.config import settings
+from config import settings
 from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -97,7 +97,7 @@ async def shutdown_scheduler():
     scheduler.shutdown()
 
 # Include routers
-from app.routers import auth, email, contacts, sequences, dashboard, weeks, zapier_status
+from routers import auth, email, contacts, sequences, dashboard, weeks, zapier_status
 app.include_router(auth.router)
 app.include_router(email.router)
 app.include_router(contacts.router)

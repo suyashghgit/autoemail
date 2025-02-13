@@ -3,9 +3,9 @@ from typing import List
 
 class Settings(BaseSettings):
     # Gmail API settings
-    ENABLE_GOOGLE_CONTACTS: bool = False  # Set to True only when scope is verified
     GMAIL_SEND_SCOPE: str = "https://www.googleapis.com/auth/gmail.send"
     CONTACTS_SCOPE: str = "https://www.googleapis.com/auth/contacts"
+    ENABLE_GOOGLE_CONTACTS: bool = False
     REDIRECT_URI: str
     CLIENT_ID: str
     CLIENT_SECRET: str

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from .. import models
-from ..database import get_db
+import models
+from database import get_db
 from pydantic import BaseModel
 
 router = APIRouter(tags=["weeks"])
