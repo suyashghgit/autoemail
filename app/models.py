@@ -61,4 +61,13 @@ class ActiveWeek(Base):
     sequence_id = Column(Integer, primary_key=True)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+class OAuthCredentials(Base):
+    __tablename__ = "oauth_credentials"
+
+    id = Column(Integer, primary_key=True)
+    credential_type = Column(String(50))  # 'client_secret' or 'token'
+    credentials_json = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now) 

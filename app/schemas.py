@@ -118,3 +118,10 @@ class EmailStatusUpdate(BaseModel):
 
 class EmailBody(BaseModel):
     email_body: str 
+
+class OAuthCredentialsSchema(BaseModel):
+    credential_type: str
+    credentials_json: str
+    
+    class Config:
+        from_attributes = True 
