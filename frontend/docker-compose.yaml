@@ -1,0 +1,11 @@
+services:
+  frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/frontend
+      - /frontend/node_modules
+    command: sh -c "npm install && npm start"
