@@ -48,6 +48,7 @@ class EmailMetric(Base):
     message_id = Column(String)
     status = Column(String)
     sent_at = Column(DateTime, default=datetime.now)
+    opened_at = Column(DateTime, nullable=True)
     
     contact = relationship(
         "Contact",

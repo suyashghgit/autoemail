@@ -22,13 +22,15 @@ from config import Settings
 from dependencies import get_settings
 from googleapiclient.discovery import build
 import models
+from fastapi.responses import FileResponse
+import time
 
 router = APIRouter(
     tags=["email"]  # Remove the prefix
 )
 
 def get_template(template_name):
-    template_path = os.path.join("app", "templates", f"{template_name}.txt")
+    template_path = os.path.join("templates", f"{template_name}.txt")
     with open(template_path, "r") as file:
         return file.read()
 
@@ -39,7 +41,7 @@ async def fetch_article_content(url: str) -> str:
         return """
         <div class='blog-content'>
             <div style="text-align: center; margin-bottom: 20px;">
-                <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                <img src="{tracking_url}"  alt="US Observer Logo" style="max-width: 100%; height: auto;">
             </div>
             <p>No article link provided.</p>
         </div>
@@ -201,43 +203,40 @@ async def send_email(
     credentials: dict = Depends(get_credentials)
 ):
     try:
-        # Get signature and disclaimer text
-        try:
-            signature = get_template("signature")
-            signature_bottom = get_template("signature_bottom")
-            disclaimer = get_template("disclaimer")
-        except FileNotFoundError as e:
-            print(f"Template error: {str(e)}")
-            signature = ""
-            signature_bottom = ""
-            disclaimer = ""
+        # Get templates
+        signature = get_template("signature")
+        signature_bottom = get_template("signature_bottom")
+        disclaimer = get_template("disclaimer")
         
-        # Get absolute path to logo file
-        logo_path = os.path.abspath(os.path.join("app", "templates", "logo.png"))
-        print(f"Logo path: {logo_path}")  # Debug print
+        # Generate unique message ID
+        message_id = f"{int(time.time())}_{email.contact_id}"
         
-        if not os.path.exists(logo_path):
-            print(f"Logo file not found at: {logo_path}")  # Debug print
-            raise FileNotFoundError(f"Logo file not found at: {logo_path}")
+        # Update the tracking URL to use absolute HTTPS URL
+        base_url = settings.BACKEND_URL.rstrip('/')
+        if not base_url.startswith('https://'):
+            base_url = f"https://{base_url.replace('http://', '')}"
+        tracking_url = f"{base_url}/track-open/{message_id}"
         
         # Fetch article content
         article_content = await fetch_article_content(str(email.article_link))
         
-        # Fixed message with dynamic link and embedded article
+        # Create email HTML with tracked logo
         fixed_message = f"""
         <div style="margin: 20px 0;">
-            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><strong>Click <a href="{email.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong></p>
+            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                <strong>Click <a href="{email.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong>
+            </p>
         </div>
         <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="{tracking_url}" alt="US Observer Logo" style="max-width: 100%; height: auto;" />
+            </div>
             {article_content}
             {signature_bottom}
         </div>
         """
         
-        # The email body is now HTML from ReactQuill
-        email_body = email.body  # No need to wrap in div, it's already HTML
-        
-        # Combine message body with logo, signature and disclaimer in HTML format
+        # Combine all parts
         full_message = f"""
         <html>
             <head>
@@ -255,7 +254,7 @@ async def send_email(
             </head>
             <body>
                 <div class="email-body">
-                    {email_body}
+                    {email.body}
                 </div>
                 <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
                     {signature}
@@ -268,48 +267,44 @@ async def send_email(
         </html>
         """
         
+        # Send email
         gmail_service = GmailService(credentials)
         message = gmail_service.create_message(
             to=email.recipient,
             subject=email.subject,
             message_text=full_message,
-            image_path=logo_path,
             reply_to=settings.EMAIL_REPLY_TO
         )
         result = gmail_service.send_message(message)
         
-        # Record the email metric - UPDATED
+        # Record the email metric
         metric = models.EmailMetric(
             contact_id=email.contact_id,
             sequence_id=email.sequence_id,
-            message_id=result.get("id"),
+            message_id=message_id,
             status="delivered",
             sent_at=datetime.now()
         )
         db.add(metric)
         db.commit()
         
-        return {"message": "Email sent successfully", "message_id": result.get("id")}
-    except FileNotFoundError as e:
-        print(f"File error: {str(e)}")
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
-    except Exception as e:
-        # Record failed attempt - UPDATED
-        if 'email' in locals():
-            metric = models.EmailMetric(
-                contact_id=email.contact_id,
-                sequence_id=email.sequence_id,
-                message_id=None,
-                status="failed",
-                sent_at=datetime.now()
-            )
-            db.add(metric)
-            db.commit()
+        return {
+            "message": "Email sent successfully",
+            "message_id": message_id
+        }
         
-        print(f"Error sending email: {str(e)}")
+    except Exception as e:
+        # Record failed attempt
+        metric = models.EmailMetric(
+            contact_id=email.contact_id,
+            sequence_id=email.sequence_id,
+            message_id=None,
+            status="failed",
+            sent_at=datetime.now()
+        )
+        db.add(metric)
+        db.commit()
+        
         raise HTTPException(
             status_code=500,
             detail=f"Failed to send email: {str(e)}"
@@ -318,6 +313,7 @@ async def send_email(
 @router.post("/send-group")
 async def send_group_email(
     email_data: GroupEmailSchema,
+    request: Request,
     credentials: Credentials = Depends(get_authenticated_credentials),
     settings: Settings = Depends(get_settings),
     db: Session = Depends(get_db)
@@ -344,31 +340,22 @@ async def send_group_email(
 
         for contact in contacts:
             try:
-                # Get signature and disclaimer text
-                try:
-                    signature = get_template("signature")
-                    signature_bottom = get_template("signature_bottom")
-                    disclaimer = get_template("disclaimer")
-                except FileNotFoundError as e:
-                    print(f"Template error: {str(e)}")
-                    signature = ""
-                    signature_bottom = ""
-                    disclaimer = ""
+                # Get templates
+                signature = get_template("signature")
+                signature_bottom = get_template("signature_bottom")
+                disclaimer = get_template("disclaimer")
                 
-                # Get absolute path to logo file
-                logo_path = os.path.abspath(os.path.join("app", "templates", "logo.png"))
+                # Generate unique message ID for tracking
+                message_id = f"{int(time.time())}_{contact.user_id}"
                 
-                if not os.path.exists(logo_path):
-                    raise FileNotFoundError(f"Logo file not found at: {logo_path}")
+                # Generate tracking URL for logo
+                base_url = settings.BACKEND_URL.rstrip('/')  # Assuming you have BACKEND_URL in settings
+                tracking_url = f"{base_url}/track-open/{message_id}"
                 
                 # Fetch article content
                 article_content = await fetch_article_content(str(sequence.article_link))
                 
-                # Use sequence email body and subject
-                email_body = f"Dear {contact.first_name},\n\n{sequence.email_body}"
-                email_subject = sequence.email_subject or "US Observer Update"
-                
-                # Create the full message
+                # Create email HTML with tracked logo
                 fixed_message = f"""
                 <div style="margin: 20px 0;">
                     <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
@@ -376,11 +363,19 @@ async def send_group_email(
                     </p>
                 </div>
                 <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="{tracking_url}" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                    </div>
                     {article_content}
                     {signature_bottom}
                 </div>
                 """
                 
+                # Use sequence email body and subject
+                email_body = f"Dear {contact.first_name},\n\n{sequence.email_body}"
+                email_subject = sequence.email_subject or "US Observer Update"
+                
+                # Create the full message
                 full_message = f"""
                 <html>
                     <head>
@@ -411,12 +406,12 @@ async def send_group_email(
                 </html>
                 """
                 
+                # Send email
                 gmail_service = GmailService(credentials)
                 message = gmail_service.create_message(
                     to=contact.email_address,
                     subject=email_subject,
                     message_text=full_message,
-                    image_path=logo_path,
                     reply_to=settings.EMAIL_REPLY_TO
                 )
                 result = gmail_service.send_message(message)
@@ -425,7 +420,7 @@ async def send_group_email(
                 metric = models.EmailMetric(
                     contact_id=contact.user_id,
                     sequence_id=email_data.sequence_id,
-                    message_id=result.get("id"),
+                    message_id=message_id,
                     status="delivered",
                     sent_at=datetime.now()
                 )
@@ -579,3 +574,45 @@ async def send_scheduled_emails():
     except Exception as e:
         print("Error sending scheduled emails:", str(e))
         raise 
+
+@router.get("/track-open/{message_id}")
+async def track_email_open(message_id: str, db: Session = Depends(get_db)):
+    """Track email opens via logo loading"""
+    try:
+        # Find the email metric
+        metric = db.query(models.EmailMetric).filter(
+            models.EmailMetric.message_id == message_id
+        ).first()
+        
+        if metric and not metric.opened_at:
+            metric.opened_at = datetime.now()
+            db.commit()
+        
+        # Return the logo image with updated headers
+        logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
+        return FileResponse(
+            logo_path,
+            media_type="image/png",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate, private",
+                "Pragma": "no-cache",
+                "Expires": "0",
+                "Access-Control-Allow-Origin": "*",
+                "Content-Security-Policy": "default-src 'self'",
+                "X-Content-Type-Options": "nosniff"
+            }
+        )
+    except Exception as e:
+        print(f"Error tracking email open: {str(e)}")
+        # Still return the logo even if tracking fails
+        logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
+        return FileResponse(
+            logo_path, 
+            media_type="image/png",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate, private",
+                "Access-Control-Allow-Origin": "*",
+                "Content-Security-Policy": "default-src 'self'",
+                "X-Content-Type-Options": "nosniff"
+            }
+        ) 
