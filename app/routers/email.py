@@ -224,13 +224,10 @@ async def send_email(
         fixed_message = f"""
         <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
             <div style="text-align: center; margin-bottom: 20px;">
-                <img src="{tracking_url}" 
-                    alt="" 
-                    width="1" 
-                    height="1" 
-                    style="display:block !important;" 
-                    border="0"
-                    />
+                <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" 
+                    alt="Logo" 
+                    style="max-width: 100%; height: auto;"
+                />
             </div>
             {article_content}
             {signature_bottom}
@@ -358,14 +355,12 @@ async def send_group_email(
                 
                 # Create email HTML with tracked logo
                 fixed_message = f"""
-                <div style="margin: 20px 0;">
-                    <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
-                        <strong>Click <a href="{sequence.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong>
-                    </p>
-                </div>
                 <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="{tracking_url}" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                        <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" 
+                            alt="Logo" 
+                            style="max-width: 100%; height: auto;"
+                        />
                     </div>
                     {article_content}
                     {signature_bottom}
