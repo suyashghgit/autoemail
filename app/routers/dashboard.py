@@ -70,7 +70,11 @@ async def get_email_metrics(db: Session = Depends(get_db)):
             func.sum(case(
                 (models.EmailMetric.status == 'failed', 1),
                 else_=0
-            )).label('failed')
+            )).label('failed'),
+            func.sum(case(
+                (models.EmailMetric.opened == True, 1),
+                else_=0
+            )).label('opened')
         ).filter(
             models.EmailMetric.sent_at >= thirty_days_ago
         ).group_by(
@@ -80,6 +84,14 @@ async def get_email_metrics(db: Session = Depends(get_db)):
         # Get detailed delivery information for each sequence
         result = []
         for metric in metrics_query:
+            # Calculate rates
+            total_sent = metric.total_sent or 0
+            delivered = metric.delivered or 0
+            opened = metric.opened or 0
+            
+            delivery_rate = (delivered / total_sent * 100) if total_sent > 0 else 0
+            opened_rate = (opened / delivered * 100) if delivered > 0 else 0
+
             # Get successful deliveries details with recipient information
             successful_deliveries = db.query(
                 models.EmailMetric,
@@ -109,26 +121,22 @@ async def get_email_metrics(db: Session = Depends(get_db)):
             # Format the delivery details
             successful_details = [
                 {
-                    "recipient": delivery[1].email_address,  # Get email from Contact
+                    "recipient": delivery[1].email_address,
                     "sent_at": delivery[0].sent_at.isoformat(),
-                    "message_id": delivery[0].message_id
+                    "message_id": delivery[0].message_id,
+                    "opened": delivery[0].opened
                 }
                 for delivery in successful_deliveries
             ]
 
             failed_details = [
                 {
-                    "recipient": delivery[1].email_address,  # Get email from Contact
+                    "recipient": delivery[1].email_address,
                     "attempted_at": delivery[0].sent_at.isoformat(),
-                    "error_message": "Delivery failed"  # Add actual error message if available
+                    "error_message": "Delivery failed"
                 }
                 for delivery in failed_deliveries
             ]
-
-            # Calculate delivery rate
-            total_sent = metric.total_sent or 0
-            delivered = metric.delivered or 0
-            delivery_rate = (delivered / total_sent * 100) if total_sent > 0 else 0
 
             sequence_name = "Monthly" if metric.sequence_id == 15 else f"Week {metric.sequence_id}"
             
@@ -136,7 +144,10 @@ async def get_email_metrics(db: Session = Depends(get_db)):
                 "sequence_id": metric.sequence_id,
                 "sequence_name": sequence_name,
                 "total_sent": total_sent,
+                "delivered": delivered,
+                "opened": opened,
                 "delivery_rate": round(delivery_rate, 1),
+                "opened_rate": round(opened_rate, 1),
                 "successful_deliveries": successful_details,
                 "failed_deliveries": failed_details
             })

@@ -216,7 +216,7 @@ const DashboardContent = () => {
                 <th className="px-6 py-3 text-left">Sequence</th>
                 <th className="px-6 py-3 text-left">Sent</th>
                 <th className="px-6 py-3 text-left">Delivery Rate</th>
-                <th className="px-6 py-3 text-left">Details</th>
+                <th className="px-6 py-3 text-left">Opened Rate</th>
               </tr>
             </thead>
             <tbody>
@@ -225,82 +225,179 @@ const DashboardContent = () => {
                   <React.Fragment key={metric.sequence_id}>
                     <tr className="border-b">
                       <td className="px-6 py-4">{metric.sequence_name}</td>
-                      <td className="px-6 py-4">{metric.total_sent}</td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                            <div
-                              className="bg-green-600 h-2.5 rounded-full"
-                              style={{ width: `${metric.delivery_rate}%` }}
-                            ></div>
-                          </div>
-                          {metric.delivery_rate}%
-                        </div>
+                        <button
+                          onClick={() => {
+                            const row = document.getElementById(`sent-details-${metric.sequence_id}`);
+                            if (row) {
+                              // Hide other detail rows
+                              document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
+                                .forEach(el => el.classList.add('hidden'));
+                              row.classList.toggle('hidden');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          {metric.total_sent}
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <button
                           onClick={() => {
-                            const row = document.getElementById(`details-${metric.sequence_id}`);
+                            const row = document.getElementById(`delivered-details-${metric.sequence_id}`);
                             if (row) {
+                              // Hide other detail rows
+                              document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
+                                .forEach(el => el.classList.add('hidden'));
                               row.classList.toggle('hidden');
                             }
                           }}
                           className="text-blue-600 hover:text-blue-800"
                         >
-                          View Details
+                          <div className="flex items-center">
+                            <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                              <div
+                                className="bg-green-600 h-2.5 rounded-full"
+                                style={{ width: `${metric.delivery_rate}%` }}
+                              ></div>
+                            </div>
+                            {metric.delivery_rate}%
+                          </div>
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => {
+                            const row = document.getElementById(`opened-details-${metric.sequence_id}`);
+                            if (row) {
+                              // Hide other detail rows
+                              document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
+                                .forEach(el => el.classList.add('hidden'));
+                              row.classList.toggle('hidden');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <div className="flex items-center">
+                            <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                              <div
+                                className="bg-blue-600 h-2.5 rounded-full"
+                                style={{ width: `${metric.opened_rate}%` }}
+                              ></div>
+                            </div>
+                            {metric.opened_rate}%
+                          </div>
                         </button>
                       </td>
                     </tr>
-                    <tr id={`details-${metric.sequence_id}`} className="hidden bg-gray-50">
+                    
+                    {/* Total Sent Details */}
+                    <tr id={`sent-details-${metric.sequence_id}`} className="hidden bg-gray-50">
                       <td colSpan="4" className="px-6 py-4">
                         <div className="space-y-4">
-                          {/* Successful Deliveries */}
-                          <div>
-                            <h4 className="font-semibold text-green-700 mb-2">
-                              Successful Deliveries ({metric.successful_deliveries?.length || 0})
-                            </h4>
-                            {metric.successful_deliveries?.length > 0 ? (
-                              <div className="grid grid-cols-2 gap-4">
-                                {metric.successful_deliveries.map((delivery, index) => (
-                                  <div key={index} className="bg-green-50 p-3 rounded">
-                                    <p className="text-sm">
-                                      <span className="font-medium">To:</span> {delivery.recipient}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                      <span className="font-medium">Sent:</span> {new Date(delivery.sent_at).toLocaleString()}
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-gray-600">No successful deliveries</p>
-                            )}
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-semibold text-gray-700">Total Sent ({metric.total_sent})</h4>
+                            <button 
+                              onClick={() => {
+                                const row = document.getElementById(`sent-details-${metric.sequence_id}`);
+                                if (row) row.classList.add('hidden');
+                              }}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <span className="text-sm">Close ×</span>
+                            </button>
                           </div>
-
-                          {/* Failed Deliveries */}
-                          <div>
-                            <h4 className="font-semibold text-red-700 mb-2">
-                              Failed Deliveries ({metric.failed_deliveries?.length || 0})
-                            </h4>
-                            {metric.failed_deliveries?.length > 0 ? (
-                              <div className="grid grid-cols-2 gap-4">
-                                {metric.failed_deliveries.map((delivery, index) => (
-                                  <div key={index} className="bg-red-50 p-3 rounded">
-                                    <p className="text-sm">
-                                      <span className="font-medium">To:</span> {delivery.recipient}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                      <span className="font-medium">Attempted:</span> {new Date(delivery.attempted_at).toLocaleString()}
-                                    </p>
+                          <div className="grid grid-cols-2 gap-4">
+                            {[...metric.successful_deliveries, ...metric.failed_deliveries]
+                              .sort((a, b) => new Date(b.sent_at || b.attempted_at) - new Date(a.sent_at || a.attempted_at))
+                              .map((delivery, index) => (
+                                <div key={index} className={`p-3 rounded ${delivery.sent_at ? 'bg-green-50' : 'bg-red-50'}`}>
+                                  <p className="text-sm">
+                                    <span className="font-medium">To:</span> {delivery.recipient}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-medium">
+                                      {delivery.sent_at ? 'Sent:' : 'Attempted:'}
+                                    </span> {' '}
+                                    {new Date(delivery.sent_at || delivery.attempted_at).toLocaleString()}
+                                  </p>
+                                  {delivery.error_message && (
                                     <p className="text-sm text-red-600">
                                       <span className="font-medium">Error:</span> {delivery.error_message}
                                     </p>
-                                  </div>
-                                ))}
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Delivered Details */}
+                    <tr id={`delivered-details-${metric.sequence_id}`} className="hidden bg-gray-50">
+                      <td colSpan="4" className="px-6 py-4">
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-semibold text-green-700">
+                              Successful Deliveries ({metric.successful_deliveries.length})
+                            </h4>
+                            <button 
+                              onClick={() => {
+                                const row = document.getElementById(`delivered-details-${metric.sequence_id}`);
+                                if (row) row.classList.add('hidden');
+                              }}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <span className="text-sm">Close ×</span>
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            {metric.successful_deliveries.map((delivery, index) => (
+                              <div key={index} className="bg-green-50 p-3 rounded">
+                                <p className="text-sm">
+                                  <span className="font-medium">To:</span> {delivery.recipient}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-medium">Sent:</span> {new Date(delivery.sent_at).toLocaleString()}
+                                </p>
                               </div>
-                            ) : (
-                              <p className="text-sm text-gray-600">No failed deliveries</p>
-                            )}
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Opened Details */}
+                    <tr id={`opened-details-${metric.sequence_id}`} className="hidden bg-gray-50">
+                      <td colSpan="4" className="px-6 py-4">
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-semibold text-blue-700">
+                              Opened Emails ({metric.successful_deliveries.filter(d => d.opened).length})
+                            </h4>
+                            <button 
+                              onClick={() => {
+                                const row = document.getElementById(`opened-details-${metric.sequence_id}`);
+                                if (row) row.classList.add('hidden');
+                              }}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <span className="text-sm">Close ×</span>
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            {metric.successful_deliveries
+                              .filter(delivery => delivery.opened)
+                              .map((delivery, index) => (
+                                <div key={index} className="bg-blue-50 p-3 rounded">
+                                  <p className="text-sm">
+                                    <span className="font-medium">To:</span> {delivery.recipient}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-medium">Sent:</span> {new Date(delivery.sent_at).toLocaleString()}
+                                  </p>
+                                </div>
+                              ))}
                           </div>
                         </div>
                       </td>
