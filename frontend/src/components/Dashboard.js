@@ -230,10 +230,15 @@ const DashboardContent = () => {
                           onClick={() => {
                             const row = document.getElementById(`sent-details-${metric.sequence_id}`);
                             if (row) {
-                              // Hide other detail rows
+                              // If this detail row is already visible, just hide it
+                              if (!row.classList.contains('hidden')) {
+                                row.classList.add('hidden');
+                                return;
+                              }
+                              // Otherwise, hide all other details and show this one
                               document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
                                 .forEach(el => el.classList.add('hidden'));
-                              row.classList.toggle('hidden');
+                              row.classList.remove('hidden');
                             }
                           }}
                           className="text-blue-600 hover:text-blue-800 font-medium"
@@ -246,10 +251,15 @@ const DashboardContent = () => {
                           onClick={() => {
                             const row = document.getElementById(`delivered-details-${metric.sequence_id}`);
                             if (row) {
-                              // Hide other detail rows
+                              // If this detail row is already visible, just hide it
+                              if (!row.classList.contains('hidden')) {
+                                row.classList.add('hidden');
+                                return;
+                              }
+                              // Otherwise, hide all other details and show this one
                               document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
                                 .forEach(el => el.classList.add('hidden'));
-                              row.classList.toggle('hidden');
+                              row.classList.remove('hidden');
                             }
                           }}
                           className="text-blue-600 hover:text-blue-800"
@@ -270,10 +280,15 @@ const DashboardContent = () => {
                           onClick={() => {
                             const row = document.getElementById(`opened-details-${metric.sequence_id}`);
                             if (row) {
-                              // Hide other detail rows
+                              // If this detail row is already visible, just hide it
+                              if (!row.classList.contains('hidden')) {
+                                row.classList.add('hidden');
+                                return;
+                              }
+                              // Otherwise, hide all other details and show this one
                               document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
                                 .forEach(el => el.classList.add('hidden'));
-                              row.classList.toggle('hidden');
+                              row.classList.remove('hidden');
                             }
                           }}
                           className="text-blue-600 hover:text-blue-800"
