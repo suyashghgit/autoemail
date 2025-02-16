@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, Response
 import schemas
 from schemas import EmailSchema, GroupEmailSchema
 from services import GmailService
@@ -24,6 +24,7 @@ from googleapiclient.discovery import build
 import models
 from fastapi.responses import FileResponse
 import time
+import base64
 
 router = APIRouter(
     tags=["email"]  # Remove the prefix
@@ -220,53 +221,15 @@ async def send_email(
         # Fetch article content
         article_content = await fetch_article_content(str(email.article_link))
         
-        # Create email HTML with tracked logo
-        fixed_message = f"""
-        <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="{tracking_url}" 
-                    alt="" 
-                    width="1" 
-                    height="1" 
-                    style="display:block !important;" 
-                    border="0"
-                    />
-            </div>
-            {article_content}
-            {signature_bottom}
-        </div>
-        """
-        
-        # Combine all parts
-        full_message = f"""
-        <html>
-            <head>
-                <style>
-                    body {{
-                        font-family: Arial, sans-serif;
-                        font-size: 14px;
-                        color: #333;
-                        line-height: 1.6;
-                    }}
-                    .email-body {{
-                        margin-bottom: 1em;
-                    }}
-                </style>
-            </head>
-            <body>
-                <div class="email-body">
-                    {email.body}
-                </div>
-                <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
-                    {signature}
-                </div>
-                {fixed_message}
-                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px;">
-                    {disclaimer}
-                </div>
-            </body>
-        </html>
-        """
+        # Create email with tracking
+        full_message = create_email_with_tracking(
+            email_body=email.body,
+            tracking_url=tracking_url,
+            signature=signature,
+            signature_bottom=signature_bottom,
+            disclaimer=disclaimer,
+            article_content=article_content
+        )
         
         # Send email
         gmail_service = GmailService(credentials)
@@ -293,6 +256,23 @@ async def send_email(
             "message": "Email sent successfully",
             "message_id": message_id
         }
+        
+    except Exception as e:
+        # Record failed attempt
+        metric = models.EmailMetric(
+            contact_id=email.contact_id,
+            sequence_id=email.sequence_id,
+            message_id=None,
+            status="failed",
+            sent_at=datetime.now()
+        )
+        db.add(metric)
+        db.commit()
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send email: {str(e)}"
+        )
         
     except Exception as e:
         # Record failed attempt
@@ -578,7 +558,7 @@ async def send_scheduled_emails():
 
 @router.get("/track-open/{message_id}")
 async def track_email_open(message_id: str, request: Request, db: Session = Depends(get_db)):
-    """Track email opens via logo loading"""
+    """Track email opens via tracking pixel"""
     try:
         # Log incoming request details for debugging
         print(f"Tracking request received for message_id: {message_id}")
@@ -590,39 +570,121 @@ async def track_email_open(message_id: str, request: Request, db: Session = Depe
             models.EmailMetric.message_id == message_id
         ).first()
         
-        if metric and not metric.opened_at:
-            metric.opened_at = datetime.now()
+        if metric:
+            if not metric.opened_at:
+                metric.opened_at = datetime.now()
+            # Always increment open count
+            metric.open_count = (metric.open_count or 0) + 1
             db.commit()
-            print(f"Updated opened_at for message_id: {message_id}")
+            print(f"Updated tracking for message_id: {message_id}")
         
-        # Return the logo image with specific headers for Gmail compatibility
-        logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
+        # Return 1x1 transparent GIF with proper headers
+        pixel = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')
         
         headers = {
-            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Cache-Control": "no-cache, no-store, must-revalidate, private",
             "Pragma": "no-cache",
             "Expires": "0",
             "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET",
-            "Content-Type": "image/png",
+            "Content-Type": "image/gif",
             "X-Content-Type-Options": "nosniff",
-            "Content-Disposition": "inline",
-            "Accept-Ranges": "bytes"
+            "Content-Length": str(len(pixel)),
+            "Accept-Ranges": "none"
         }
         
-        return FileResponse(
-            path=logo_path,
-            media_type="image/png",
-            headers=headers,
-            filename="logo.png"
+        return Response(
+            content=pixel,
+            media_type="image/gif",
+            headers=headers
         )
         
     except Exception as e:
         print(f"Error in track_email_open: {str(e)}")
-        # Even if tracking fails, return the image
-        logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
-        return FileResponse(
-            path=logo_path,
-            media_type="image/png",
-            headers={"Cache-Control": "no-cache"}
+        # Even if tracking fails, return the pixel
+        pixel = base64.b64decode('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7')
+        return Response(
+            content=pixel,
+            media_type="image/gif",
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Content-Type": "image/gif"
+            }
         )
+
+def create_email_with_tracking(
+    email_body: str, 
+    tracking_url: str, 
+    signature: str, 
+    signature_bottom: str, 
+    disclaimer: str, 
+    article_content: str
+) -> str:
+    """Create email HTML with tracking pixel"""
+    # Add tracking pixel at both top and bottom for better tracking reliability
+    tracking_img = f'''
+        <img src="{tracking_url}" 
+            alt="" 
+            width="1" 
+            height="1" 
+            style="display:none !important; position:absolute; visibility:hidden;" 
+            border="0"
+        />
+    '''
+    
+    fixed_message = f"""
+    <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        {tracking_img}
+        <div style="margin: 20px 0;">
+            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
+                <strong>Click <a href="{sequence.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong>
+            </p>
+        </div>
+        {article_content}
+        {signature_bottom}
+        {tracking_img}
+    </div>
+    """
+    
+    return f"""
+    <!DOCTYPE html>
+    <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <style>
+                body {{
+                    font-family: Arial, sans-serif;
+                    font-size: 14px;
+                    color: #333;
+                    line-height: 1.6;
+                    margin: 0;
+                    padding: 0;
+                    -webkit-text-size-adjust: none;
+                    text-size-adjust: none;
+                }}
+                .email-body {{
+                    margin-bottom: 1em;
+                    padding: 20px;
+                }}
+                @media only screen and (max-width: 480px) {{
+                    .email-body {{
+                        padding: 10px;
+                    }}
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="email-body">
+                {email_body}
+            </div>
+            <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333; padding: 0 20px;">
+                {signature}
+            </div>
+            {fixed_message}
+            <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px; padding: 0 20px;">
+                {disclaimer}
+            </div>
+        </body>
+    </html>
+    """
