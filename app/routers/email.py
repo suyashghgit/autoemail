@@ -580,12 +580,13 @@ async def track_email_open(message_id: str, request: Request, db: Session = Depe
         print(f"Request headers: {dict(request.headers)}")
         print(f"Client IP: {request.client.host}")
         
-        # Find the email metric
+        # Find the specific email metric with exact message_id match
         metric = db.query(models.EmailMetric).filter(
-            models.EmailMetric.message_id == message_id
+            models.EmailMetric.message_id == message_id,
+            models.EmailMetric.opened == False  # Only update if not already opened
         ).first()
         
-        if metric and not metric.opened_at:
+        if metric:
             metric.opened_at = datetime.now()
             metric.opened = True
             db.commit()
