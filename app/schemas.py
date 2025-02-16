@@ -104,6 +104,7 @@ class EmailStatusUpdate(BaseModel):
     email_address: EmailStr
     status: str
     message_id: Optional[str] = None
+    history_id: Optional[str] = None
     error_message: Optional[str] = None
 
     class Config:
@@ -112,6 +113,7 @@ class EmailStatusUpdate(BaseModel):
                 "email_address": "example@email.com",
                 "status": "bounced",
                 "message_id": "12345",
+                "history_id": "54321",
                 "error_message": "Mailbox full"
             }
         } 

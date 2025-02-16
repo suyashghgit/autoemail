@@ -202,14 +202,14 @@ async def send_email(
     db: Session = Depends(get_db),
     credentials: dict = Depends(get_credentials)
 ):
+    message_id = f"{int(time.time())}_{email.contact_id}"
+    history_id = None
+    
     try:
         # Get templates
         signature = get_template("signature")
         signature_bottom = get_template("signature_bottom")
         disclaimer = get_template("disclaimer")
-        
-        # Generate unique message ID
-        message_id = f"{int(time.time())}_{email.contact_id}"
         
         # Update the tracking URL to use absolute HTTPS URL
         base_url = settings.BACKEND_URL.rstrip('/')
@@ -265,7 +265,7 @@ async def send_email(
         </html>
         """
         
-        # Send email
+        # Send email and get response
         gmail_service = GmailService(credentials)
         message = gmail_service.create_message(
             to=email.recipient,
@@ -275,11 +275,25 @@ async def send_email(
         )
         result = gmail_service.send_message(message)
         
+        # Extract history ID from response - add debug logging
+        print("Gmail API Response:", result)  # Debug log
+        history_id = result.get('historyId')
+        if not history_id and 'id' in result:
+            # Try alternate location in response
+            history_id = result['id']
+        
+        print(f"Extracted History ID: {history_id}")  # Debug log
+        
+        if not history_id:
+            print("Warning: No history ID returned from Gmail API")
+            print("Full Gmail response:", result)
+        
         # Record the email metric
         metric = models.EmailMetric(
             contact_id=email.contact_id,
             sequence_id=email.sequence_id,
             message_id=message_id,
+            history_id=str(history_id) if history_id else None,  # Convert to string
             status="delivered",
             sent_at=datetime.now()
         )
@@ -288,15 +302,21 @@ async def send_email(
         
         return {
             "message": "Email sent successfully",
-            "message_id": message_id
+            "message_id": message_id,
+            "history_id": history_id,
+            "gmail_response": result  # Include full response for debugging
         }
         
     except Exception as e:
+        print(f"Error sending email: {str(e)}")  # Debug log
+        print(f"Gmail service response (if any): {locals().get('result', 'No response')}")  # Debug log
+        
         # Record failed attempt
         metric = models.EmailMetric(
             contact_id=email.contact_id,
             sequence_id=email.sequence_id,
-            message_id=None,
+            message_id=message_id,
+            history_id=str(history_id) if history_id else None,  # Convert to string
             status="failed",
             sent_at=datetime.now()
         )
@@ -337,14 +357,14 @@ async def send_group_email(
         failed_sends = 0
 
         for contact in contacts:
+            message_id = f"{int(time.time())}_{contact.user_id}"
+            history_id = None
+            
             try:
                 # Get templates
                 signature = get_template("signature")
                 signature_bottom = get_template("signature_bottom")
                 disclaimer = get_template("disclaimer")
-                
-                # Generate unique message ID for tracking
-                message_id = f"{int(time.time())}_{contact.user_id}"
                 
                 # Generate tracking URL for logo
                 base_url = settings.BACKEND_URL.rstrip('/')  # Assuming you have BACKEND_URL in settings
@@ -402,7 +422,7 @@ async def send_group_email(
                 </html>
                 """
                 
-                # Send email
+                # Send email and get response
                 gmail_service = GmailService(credentials)
                 message = gmail_service.create_message(
                     to=contact.email_address,
@@ -412,11 +432,25 @@ async def send_group_email(
                 )
                 result = gmail_service.send_message(message)
                 
+                # Extract history ID from response - add debug logging
+                print(f"Gmail API Response for {contact.email_address}:", result)  # Debug log
+                history_id = result.get('historyId')
+                if not history_id and 'id' in result:
+                    # Try alternate location in response
+                    history_id = result['id']
+                
+                print(f"Extracted History ID for {contact.email_address}: {history_id}")  # Debug log
+                
+                if not history_id:
+                    print(f"Warning: No history ID returned for contact {contact.user_id}")
+                    print("Full Gmail response:", result)
+                
                 # Record successful email metric
                 metric = models.EmailMetric(
                     contact_id=contact.user_id,
                     sequence_id=email_data.sequence_id,
                     message_id=message_id,
+                    history_id=str(history_id) if history_id else None,  # Convert to string
                     status="delivered",
                     sent_at=datetime.now()
                 )
@@ -429,11 +463,14 @@ async def send_group_email(
 
             except Exception as e:
                 print(f"Failed to send email to {contact.email_address}: {str(e)}")
+                print(f"Gmail service response (if any): {locals().get('result', 'No response')}")  # Debug log
+                
                 # Record failed email metric
                 metric = models.EmailMetric(
                     contact_id=contact.user_id,
                     sequence_id=email_data.sequence_id,
-                    message_id=None,
+                    message_id=message_id,
+                    history_id=str(history_id) if history_id else None,  # Convert to string
                     status="failed",
                     sent_at=datetime.now()
                 )
