@@ -222,14 +222,15 @@ async def send_email(
         
         # Create email HTML with tracked logo
         fixed_message = f"""
-        <div style="margin: 20px 0;">
-            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
-                <strong>Click <a href="{email.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong>
-            </p>
-        </div>
         <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
             <div style="text-align: center; margin-bottom: 20px;">
-                <img src="{tracking_url}" alt="US Observer Logo" style="max-width: 100%; height: auto;" />
+                <img src="{tracking_url}" 
+                    alt="" 
+                    width="1" 
+                    height="1" 
+                    style="display:block !important;" 
+                    border="0"
+                    />
             </div>
             {article_content}
             {signature_bottom}
@@ -576,9 +577,14 @@ async def send_scheduled_emails():
         raise 
 
 @router.get("/track-open/{message_id}")
-async def track_email_open(message_id: str, db: Session = Depends(get_db)):
+async def track_email_open(message_id: str, request: Request, db: Session = Depends(get_db)):
     """Track email opens via logo loading"""
     try:
+        # Log incoming request details for debugging
+        print(f"Tracking request received for message_id: {message_id}")
+        print(f"Request headers: {dict(request.headers)}")
+        print(f"Client IP: {request.client.host}")
+        
         # Find the email metric
         metric = db.query(models.EmailMetric).filter(
             models.EmailMetric.message_id == message_id
@@ -587,32 +593,36 @@ async def track_email_open(message_id: str, db: Session = Depends(get_db)):
         if metric and not metric.opened_at:
             metric.opened_at = datetime.now()
             db.commit()
+            print(f"Updated opened_at for message_id: {message_id}")
         
-        # Return the logo image with updated headers
+        # Return the logo image with specific headers for Gmail compatibility
         logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
+        
+        headers = {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET",
+            "Content-Type": "image/png",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": "inline",
+            "Accept-Ranges": "bytes"
+        }
+        
         return FileResponse(
-            logo_path,
+            path=logo_path,
             media_type="image/png",
-            headers={
-                "Cache-Control": "no-cache, no-store, must-revalidate, private",
-                "Pragma": "no-cache",
-                "Expires": "0",
-                "Access-Control-Allow-Origin": "*",
-                "Content-Security-Policy": "default-src 'self'",
-                "X-Content-Type-Options": "nosniff"
-            }
+            headers=headers,
+            filename="logo.png"
         )
+        
     except Exception as e:
-        print(f"Error tracking email open: {str(e)}")
-        # Still return the logo even if tracking fails
+        print(f"Error in track_email_open: {str(e)}")
+        # Even if tracking fails, return the image
         logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
         return FileResponse(
-            logo_path, 
+            path=logo_path,
             media_type="image/png",
-            headers={
-                "Cache-Control": "no-cache, no-store, must-revalidate, private",
-                "Access-Control-Allow-Origin": "*",
-                "Content-Security-Policy": "default-src 'self'",
-                "X-Content-Type-Options": "nosniff"
-            }
-        ) 
+            headers={"Cache-Control": "no-cache"}
+        )
