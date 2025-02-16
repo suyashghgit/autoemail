@@ -587,6 +587,7 @@ async def track_email_open(message_id: str, request: Request, db: Session = Depe
         
         if metric and not metric.opened_at:
             metric.opened_at = datetime.now()
+            metric.opened = True
             db.commit()
             print(f"Updated opened_at for message_id: {message_id}")
         
