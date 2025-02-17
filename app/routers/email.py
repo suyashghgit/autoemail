@@ -40,9 +40,6 @@ async def fetch_article_content(url: str) -> str:
     if not url or not url.strip():
         return """
         <div class='blog-content'>
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="{tracking_url}"  alt="US Observer Logo" style="max-width: 100%; height: auto;">
-            </div>
             <p>No article link provided.</p>
         </div>
         """
@@ -164,19 +161,14 @@ async def fetch_article_content(url: str) -> str:
                 article_content.append(clear_div)
                 
                 # Preserve all original classes and styles
+                # Remove the logo from article_content
                 return f"""
-                    <div style="text-align: left; margin-bottom: 20px;">
-                        <img src="cid:logo" alt="US Observer Logo" style="width: 100%; height: auto;">
-                    </div>
                     {str(article_content)}
                 """
             else:
                 print("No article content found with any selector")  # Debug log
                 return f"""
                 <div class='blog-content'>
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
-                    </div>
                     <p>Unable to extract the article content. Please visit 
                     <a href="{url}">the article page</a> directly to read the full content.</p>
                 </div>
@@ -187,9 +179,6 @@ async def fetch_article_content(url: str) -> str:
         print(f"Error details: {e.__dict__}")  # More error details if available
         return f"""
         <div class='blog-content'>
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
-            </div>
             <p>The article content is temporarily unavailable (Error: {str(e)}). Please visit 
             <a href="{url}">the article page</a> directly to read the full content.</p>
         </div>
@@ -220,14 +209,12 @@ async def send_email(
         # Fetch article content
         article_content = await fetch_article_content(str(email.article_link))
         
-        # Create email HTML with tracked logo
+        # Create email HTML with tracked logo (only one logo)
         fixed_message = f"""
         <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
             <div style="text-align: center; margin-bottom: 20px;">
-                <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" 
-                    alt="Logo" 
-                    style="max-width: 100%; height: auto;"
-                />
+                <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" style="display: none;"/>
+                <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
             </div>
             {article_content}
             {signature_bottom}
@@ -271,7 +258,8 @@ async def send_email(
             to=email.recipient,
             subject=email.subject,
             message_text=full_message,
-            reply_to=settings.EMAIL_REPLY_TO
+            reply_to=settings.EMAIL_REPLY_TO,
+            image_path="templates/logo.png"
         )
         result = gmail_service.send_message(message)
         
@@ -377,10 +365,8 @@ async def send_group_email(
                 fixed_message = f"""
                 <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" 
-                            alt="Logo" 
-                            style="max-width: 100%; height: auto;"
-                        />
+                        <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" style="display: none;"/>
+                        <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
                     </div>
                     {article_content}
                     {signature_bottom}
@@ -428,7 +414,8 @@ async def send_group_email(
                     to=contact.email_address,
                     subject=email_subject,
                     message_text=full_message,
-                    reply_to=settings.EMAIL_REPLY_TO
+                    reply_to=settings.EMAIL_REPLY_TO,
+                    image_path="templates/logo.png"
                 )
                 result = gmail_service.send_message(message)
                 
@@ -644,19 +631,19 @@ async def track_email_open(message_id: str, request: Request, db: Session = Depe
             "Accept-Ranges": "bytes"
         }
         
-        return FileResponse(
-            path=logo_path,
-            media_type="image/png",
-            headers=headers,
-            filename="logo.png"
-        )
+        # return FileResponse(
+        #     path=logo_path,
+        #     media_type="image/png",
+        #     headers=headers,
+        #     filename="logo.png"
+        # )
         
     except Exception as e:
         print(f"Error in track_email_open: {str(e)}")
         # Even if tracking fails, return the image
         logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
-        return FileResponse(
-            path=logo_path,
-            media_type="image/png",
-            headers={"Cache-Control": "no-cache"}
-        )
+        # return FileResponse(
+        #     path=logo_path,
+        #     media_type="image/png",
+        #     headers={"Cache-Control": "no-cache"}
+        # )
