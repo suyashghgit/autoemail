@@ -34,30 +34,43 @@ async def get_client_secrets(db: Session):
     return json.loads(client_secrets.credentials_json)
 
 async def save_token(db: Session, credentials_dict: dict):
-    # Get the client_id from the credentials_dict
-
     if not credentials_dict.get('refresh_token'):
         print("Warning: No refresh token received. Ensure access_type='offline' and prompt='consent'.")
         return
     
-    client_id = credentials_dict.get('client_id')
-    
-    # Find existing token record for this client_id
+    # Update or create token record
     token_record = db.query(OAuthCredentials).filter(
-        OAuthCredentials.credential_type == "token",
-        OAuthCredentials.credentials_json.contains(client_id)  # This checks if the client_id exists in the JSON
+        OAuthCredentials.credential_type == "token"
     ).first()
     
     if token_record:
         # Update existing record
         token_record.credentials_json = json.dumps(credentials_dict)
     else:
-        # Create new record only if none exists
+        # Create new record
         token_record = OAuthCredentials(
             credential_type="token",
             credentials_json=json.dumps(credentials_dict)
         )
         db.add(token_record)
+    
+    # Update or create refresh token record
+    refresh_token_record = db.query(OAuthCredentials).filter(
+        OAuthCredentials.credential_type == "refresh_token"
+    ).first()
+    
+    refresh_token_dict = {"refresh_token": credentials_dict["refresh_token"]}
+    
+    if refresh_token_record:
+        # Update existing record
+        refresh_token_record.credentials_json = json.dumps(refresh_token_dict)
+    else:
+        # Create new record
+        refresh_token_record = OAuthCredentials(
+            credential_type="refresh_token",
+            credentials_json=json.dumps(refresh_token_dict)
+        )
+        db.add(refresh_token_record)
     
     db.commit()
     return token_record
@@ -233,4 +246,29 @@ async def get_authenticated_credentials(
             detail="Not authenticated. Please authenticate with Gmail first.",
             headers={"WWW-Authenticate": "Bearer"}
         )
-    return credentials 
+    return credentials
+
+@router.post("/save-client-secrets")
+async def save_client_secrets(credentials_dict: dict, db: Session = Depends(get_db)):
+    """Endpoint to save or update client secrets"""
+    try:
+        # Check if client_secret record exists
+        client_secret_record = db.query(OAuthCredentials).filter(
+            OAuthCredentials.credential_type == "client_secret"
+        ).first()
+        
+        if client_secret_record:
+            # Update existing record
+            client_secret_record.credentials_json = json.dumps(credentials_dict)
+        else:
+            # Create new record
+            client_secret_record = OAuthCredentials(
+                credential_type="client_secret",
+                credentials_json=json.dumps(credentials_dict)
+            )
+            db.add(client_secret_record)
+        
+        db.commit()
+        return {"status": "success", "message": "Client secrets saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save client secrets: {str(e)}") 
