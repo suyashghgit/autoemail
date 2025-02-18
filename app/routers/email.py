@@ -535,12 +535,12 @@ def get_email_groups(db: Session = Depends(get_db)):
 
 @router.post("/schedule-group-emails")
 async def schedule_group_emails(
-    db: Session = Depends(get_db),
-    credentials: dict = Depends(get_credentials)
+    credentials: Credentials = Depends(get_authenticated_credentials),
+    settings: Settings = Depends(get_settings),
+    db: Session = Depends(get_db)
 ):
     """Send emails to all active groups in sequence"""
     try:
-        # Remove await for synchronous SQLAlchemy query
         active_sequences = db.query(models.SequenceMapping).filter(
             models.SequenceMapping.is_active == True,
             models.SequenceMapping.sequence_id.in_(list(range(1, 11)) + [15])
@@ -549,12 +549,12 @@ async def schedule_group_emails(
         results = []
         for sequence in active_sequences:
             try:
-                # Keep await here since send_group_email is async
                 result = await send_group_email(
-                    GroupEmailSchema(sequence_id=sequence.sequence_id),
-                    Request,
-                    db,
-                    credentials
+                    email_data=GroupEmailSchema(sequence_id=sequence.sequence_id),
+                    request=Request,
+                    credentials=credentials,
+                    settings=settings,
+                    db=db
                 )
                 results.append({
                     "sequence_id": sequence.sequence_id,
@@ -581,19 +581,26 @@ async def schedule_group_emails(
             detail=f"Failed to process scheduled group emails: {str(e)}"
         )
 
-# Function to send scheduled emails
+# Updated send_scheduled_emails function
 async def send_scheduled_emails():
     """Send emails to all active groups every Tuesday"""
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{settings.BACKEND_URL}/schedule-group-emails"
-            )
-            print("Response:", response.json())
-            return response
+        # Get credentials and settings
+        db = next(get_db())
+        settings = get_settings()
+        credentials = await get_authenticated_credentials(settings, db)
+        
+        # Make the direct function call instead of HTTP request
+        result = await schedule_group_emails(
+            credentials=credentials,
+            settings=settings,
+            db=db
+        )
+        print("Scheduled emails result:", result)
+        return result
     except Exception as e:
         print("Error sending scheduled emails:", str(e))
-        raise 
+        raise
 
 @router.get("/track-open/{message_id}")
 async def track_email_open(message_id: str, request: Request, db: Session = Depends(get_db)):
