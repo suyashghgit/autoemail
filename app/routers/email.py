@@ -214,7 +214,9 @@ async def send_email(
         <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
             <div style="text-align: center; margin-bottom: 20px;">
                 <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" style="display: none;"/>
-                <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                <a href="{email.article_link}">
+                    <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                </a>
             </div>
             {article_content}
             {signature_bottom}
@@ -367,7 +369,9 @@ async def send_group_email(
                 <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" style="display: none;"/>
-                        <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                        <a href="{sequence.article_link}">
+                            <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                        </a>
                     </div>
                     {article_content}
                     {signature_bottom}
