@@ -243,6 +243,7 @@ async def send_email(
                 </div>
                 <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
                     {signature}
+                    <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><strong>Click <a href="{email.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong></p>
                 </div>
                 {fixed_message}
                 <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px;">
@@ -399,6 +400,8 @@ async def send_group_email(
                         </div>
                         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
                             {signature}
+                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><strong>Click <a href="{sequence.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong></p>
+
                         </div>
                         {fixed_message}
                         <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px;">
