@@ -10,15 +10,16 @@ from services import PeopleService
 from dependencies import get_credentials, get_settings
 from google.oauth2.credentials import Credentials
 from config import Settings
+from routers.auth import get_authenticated_credentials
 
 router = APIRouter()
 
 @router.post("/contacts")
-def create_contact(
+async def create_contact(
     contact: ContactCreate, 
     request: Request,
     db: Session = Depends(get_db),
-    credentials: Credentials = Depends(get_credentials),
+    credentials: Credentials = Depends(get_authenticated_credentials),
     settings: Settings = Depends(get_settings)
 ):
     # Check if email already exists

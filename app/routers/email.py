@@ -189,7 +189,7 @@ async def send_email(
     email: EmailSchema,
     request: Request,
     db: Session = Depends(get_db),
-    credentials: dict = Depends(get_credentials)
+    credentials: Credentials = Depends(get_authenticated_credentials)
 ):
     message_id = f"{int(time.time())}_{email.contact_id}"
     history_id = None

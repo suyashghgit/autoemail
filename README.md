@@ -168,3 +168,10 @@ docker run -d \
 ## License
 
 This project is proprietary and confidential.
+
+## Connect PG Admin to the database in docker
+Host name/address: localhost (not postgres or postgres-db)
+Port: 5432
+Maintenance database: local
+Username: suyashghimire
+Password: root
