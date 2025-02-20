@@ -103,7 +103,7 @@ async def fetch_article_content(url: str) -> str:
                 # Add padding to the first paragraph
                 first_p = article_content.find_all('p')
                 if first_p:  # Check if any paragraphs exist
-                    first_p[0]['style'] = 'padding-right: 20px; text-align: right;'  # Add 20px left padding
+                    first_p[0]['style'] = 'padding: 0 20px; text-align: center;'  # Center alignment with padding
                 
                 # Keep all style tags and CSS classes
                 # Convert relative URLs to absolute URLs
