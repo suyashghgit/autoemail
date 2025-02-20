@@ -93,10 +93,17 @@ async def fetch_article_content(url: str) -> str:
                 for iframe in article_content.find_all('iframe'):
                     iframe.decompose()
                 
+                # Add container styles to article_content
+                article_content['style'] = (
+                    "padding: 30px; "
+                    "border-radius: 5px; "
+                    "overflow: hidden;"  # This ensures floating images stay within
+                )
+                
                 # Add padding to the first paragraph
-                first_p = article_content.find('p')
-                if first_p:
-                    first_p['style'] = 'padding-left: 20px;'  # Add 20px left padding
+                # first_p = article_content.find_all('p')
+                # if first_p:  # Check if any paragraphs exist
+                #     first_p[0]['style'] = 'padding-left: 20px;'  # Add 20px left padding
                 
                 # Keep all style tags and CSS classes
                 # Convert relative URLs to absolute URLs
