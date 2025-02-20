@@ -948,7 +948,7 @@ const ContactsSection = () => {
                   )}
                 </div>
               </th>
-              <th className="p-3 text-left">Notes</th>
+              <th className="p-3 text-left w-[600px]">Notes</th>
             </tr>
           </thead>
           <tbody>
@@ -965,7 +965,7 @@ const ContactsSection = () => {
                 <td className="p-3">
                   {contact.last_email_sent_at ? new Date(contact.last_email_sent_at).toLocaleDateString() : '-'}
                 </td>
-                <td className="p-3">
+                <td className="p-3 w-[600px] break-all">
                   {editingNotes === contact.user_id ? (
                     <div className="flex flex-col space-y-2">
                       <textarea
@@ -994,13 +994,13 @@ const ContactsSection = () => {
                     </div>
                   ) : (
                     <div 
-                      className="group relative cursor-pointer"
+                      className="group relative cursor-pointer break-all"
                       onClick={() => {
                         setEditingNotes(contact.user_id);
                         setNoteText(contact.notes || '');
                       }}
                     >
-                      <div className="min-h-[1.5rem] max-h-[4.5rem] overflow-hidden">
+                      <div className="min-h-[1.5rem]">
                         {contact.notes ? (
                           <p className="whitespace-pre-wrap">{contact.notes}</p>
                         ) : (
