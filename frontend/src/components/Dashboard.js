@@ -862,7 +862,7 @@ const ContactsSection = () => {
                 onClick={() => handleSort('user_id')}
               >
                 <div className="flex items-center">
-                  User ID
+                  ID
                   {sortField === 'user_id' && (
                     <span className="ml-1">
                       {sortDirection === 'asc' ? '↑' : '↓'}
@@ -948,16 +948,16 @@ const ContactsSection = () => {
                   )}
                 </div>
               </th>
-              <th className="p-3 text-left w-[600px]">Notes</th>
+              <th className="p-3 text-left">Notes</th>
             </tr>
           </thead>
           <tbody>
-            {filteredContacts.map(contact => (
+            {filteredContacts.map((contact) => (
               <tr key={contact.user_id} className="border-b hover:bg-gray-50">
                 <td className="p-3">{contact.user_id}</td>
                 <td className="p-3">{`${contact.first_name} ${contact.last_name}`}</td>
                 <td className="p-3">{contact.email_address}</td>
-                <td className="p-3">{contact.company_name || '-'}</td>
+                <td className="p-3">{contact.company_name || 'N/A'}</td>
                 <td className="p-3">{formatSequence(contact.email_sequence)}</td>
                 <td className="p-3">
                   {contact.join_date ? new Date(contact.join_date).toLocaleDateString() : '-'}
@@ -965,7 +965,7 @@ const ContactsSection = () => {
                 <td className="p-3">
                   {contact.last_email_sent_at ? new Date(contact.last_email_sent_at).toLocaleDateString() : '-'}
                 </td>
-                <td className="p-3 w-[600px] break-all">
+                <td className="p-3 max-w-[300px]">
                   {editingNotes === contact.user_id ? (
                     <div className="flex flex-col space-y-2">
                       <textarea
@@ -994,15 +994,17 @@ const ContactsSection = () => {
                     </div>
                   ) : (
                     <div 
-                      className="group relative cursor-pointer break-all"
+                      className="group relative cursor-pointer"
                       onClick={() => {
                         setEditingNotes(contact.user_id);
                         setNoteText(contact.notes || '');
                       }}
                     >
-                      <div className="min-h-[1.5rem]">
+                      <div className="min-h-[1.5rem] overflow-hidden">
                         {contact.notes ? (
-                          <p className="whitespace-pre-wrap">{contact.notes}</p>
+                          <p className="whitespace-pre-wrap break-words overflow-ellipsis line-clamp-3">
+                            {contact.notes}
+                          </p>
                         ) : (
                           <p className="text-gray-400 italic">Click to add notes</p>
                         )}
