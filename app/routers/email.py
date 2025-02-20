@@ -36,10 +36,9 @@ def get_template(template_name):
 
 async def fetch_article_content(url: str) -> str:
     """Fetch and extract the main content from the article URL"""
-    # Handle empty or None URL
     if not url or not url.strip():
         return """
-        <div class='blog-content'>
+        <div class='blog-content' style='text-align: justify;'>
             <p>No article link provided.</p>
         </div>
         """
@@ -60,9 +59,8 @@ async def fetch_article_content(url: str) -> str:
             print(f"Response status code: {response.status_code}")  # Debug log
             
             if response.status_code != 200:
-                print(f"Failed to fetch content. Status code: {response.status_code}")
                 return f"""
-                <div class='blog-content'>
+                <div class='blog-content' style='text-align: justify;'>
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
                     </div>
@@ -163,12 +161,14 @@ async def fetch_article_content(url: str) -> str:
                 # Preserve all original classes and styles
                 # Remove the logo from article_content
                 return f"""
-                    {str(article_content)}
+                    <div style='text-align: justify;'>
+                        {str(article_content)}
+                    </div>
                 """
             else:
                 print("No article content found with any selector")  # Debug log
                 return f"""
-                <div class='blog-content'>
+                <div class='blog-content' style='text-align: justify;'>
                     <p>Unable to extract the article content. Please visit 
                     <a href="{url}">the article page</a> directly to read the full content.</p>
                 </div>
@@ -178,7 +178,7 @@ async def fetch_article_content(url: str) -> str:
         print(f"Error type: {type(e)}")  # Additional error info
         print(f"Error details: {e.__dict__}")  # More error details if available
         return f"""
-        <div class='blog-content'>
+        <div class='blog-content' style='text-align: justify;'>
             <p>The article content is temporarily unavailable (Error: {str(e)}). Please visit 
             <a href="{url}">the article page</a> directly to read the full content.</p>
         </div>
@@ -236,6 +236,7 @@ async def send_email(
                     }}
                     .email-body {{
                         margin-bottom: 1em;
+                        text-align: justify;
                     }}
                 </style>
             </head>
@@ -395,6 +396,7 @@ async def send_group_email(
                             }}
                             .email-body {{
                                 margin-bottom: 1em;
+                                text-align: justify;
                             }}
                         </style>
                     </head>
