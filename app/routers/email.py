@@ -101,9 +101,9 @@ async def fetch_article_content(url: str) -> str:
                 )
                 
                 # Add padding to the first paragraph
-                # first_p = article_content.find_all('p')
-                # if first_p:  # Check if any paragraphs exist
-                #     first_p[0]['style'] = 'padding-left: 20px;'  # Add 20px left padding
+                first_p = article_content.find_all('p')
+                if first_p:  # Check if any paragraphs exist
+                    first_p[0]['style'] = 'padding-right: 20px; text-align: right;'  # Add 20px left padding
                 
                 # Keep all style tags and CSS classes
                 # Convert relative URLs to absolute URLs
@@ -376,7 +376,7 @@ async def send_group_email(
                 fixed_message = f"""
                 <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" style="display: none;"/>
+                        <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}"/>
                         <a href="{sequence.article_link}">
                             <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
                         </a>
