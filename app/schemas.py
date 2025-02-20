@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, HttpUrl
 from datetime import datetime
 from typing import List, Optional
+from pydantic import validator
 
 class EmailSchema(BaseModel):
     recipient: str
@@ -127,3 +128,13 @@ class OAuthCredentialsSchema(BaseModel):
     
     class Config:
         from_attributes = True 
+
+class ContactUpdate(BaseModel):
+    notes: Optional[str] = None
+    email_sequence: Optional[int] = None
+
+    @validator('email_sequence')
+    def validate_sequence(cls, v):
+        if v is not None and v not in list(range(1, 11)) + [15]:
+            raise ValueError('Sequence must be between 1-10 or 15')
+        return v 

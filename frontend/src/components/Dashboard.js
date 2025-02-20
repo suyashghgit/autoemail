@@ -455,6 +455,7 @@ const ContactsSection = () => {
   const [sortField, setSortField] = useState('user_id');
   const [sortDirection, setSortDirection] = useState('asc');
   const [sequenceFilter, setSequenceFilter] = useState('all');
+  const [editingSequence, setEditingSequence] = useState(null);
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -565,6 +566,29 @@ const ContactsSection = () => {
     } catch (err) {
       toast.error('Failed to update notes');
       console.error('Failed to update notes:', err);
+    }
+  };
+
+  // Add this new function to handle sequence updates
+  const handleSequenceUpdate = async (contactId, newSequence) => {
+    try {
+      await axios.patch(
+        `${process.env.REACT_APP_API_URL}/contacts/${contactId}`,
+        { email_sequence: parseInt(newSequence) }
+      );
+      
+      // Update the contacts list with new sequence
+      setContacts(contacts.map(contact => 
+        contact.user_id === contactId 
+          ? { ...contact, email_sequence: parseInt(newSequence) }
+          : contact
+      ));
+      
+      setEditingSequence(null);
+      toast.success('Sequence updated successfully');
+    } catch (err) {
+      toast.error('Failed to update sequence');
+      console.error('Failed to update sequence:', err);
     }
   };
 
@@ -958,7 +982,29 @@ const ContactsSection = () => {
                 <td className="p-3">{`${contact.first_name} ${contact.last_name}`}</td>
                 <td className="p-3">{contact.email_address}</td>
                 <td className="p-3">{contact.company_name || 'N/A'}</td>
-                <td className="p-3">{formatSequence(contact.email_sequence)}</td>
+                <td className="p-3">
+                  {editingSequence === contact.user_id ? (
+                    <select
+                      value={contact.email_sequence}
+                      onChange={(e) => handleSequenceUpdate(contact.user_id, e.target.value)}
+                      onBlur={() => setEditingSequence(null)}
+                      autoFocus
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                    >
+                      {[...Array(10)].map((_, i) => (
+                        <option key={i + 1} value={i + 1}>Week {i + 1}</option>
+                      ))}
+                      <option value="15">Monthly</option>
+                    </select>
+                  ) : (
+                    <div 
+                      onClick={() => setEditingSequence(contact.user_id)}
+                      className="cursor-pointer hover:bg-gray-100 p-1 rounded"
+                    >
+                      {formatSequence(contact.email_sequence)}
+                    </div>
+                  )}
+                </td>
                 <td className="p-3">
                   {contact.join_date ? new Date(contact.join_date).toLocaleDateString() : '-'}
                 </td>
