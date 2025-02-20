@@ -376,7 +376,7 @@ async def send_group_email(
                 fixed_message = f"""
                 <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}"/>
+                        <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" style="display: none;"    />
                         <a href="{sequence.article_link}">
                             <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
                         </a>
