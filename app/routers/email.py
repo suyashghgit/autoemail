@@ -121,39 +121,77 @@ async def fetch_article_content(url: str) -> str:
                             elif not src.startswith(('http://', 'https://')):
                                 img['src'] = f"{base_domain}/{src.lstrip('/')}"
                         
-                        # Create new container
+                        # Find parent wp-caption div if it exists
+                        wp_caption = img.find_parent('div', class_=lambda x: x and 'wp-caption' in x.split())
+                        
+                        # Determine alignment from wp-caption classes
+                        alignment = 'left'  # default
+                        if wp_caption:
+                            classes = wp_caption.get('class', [])
+                            if isinstance(classes, str):
+                                classes = classes.split()
+                            if 'alignright' in classes:
+                                alignment = 'right'
+                            elif 'aligncenter' in classes:
+                                alignment = 'center'
+                        
+                        # Create container with alignment-specific styles
                         container = soup.new_tag('div')
                         container['class'] = 'image-container'
-                        container['style'] = (
+                        
+                        # Base styles
+                        container_style = (
                             "border: 1px solid #ddd; "
                             "padding: 4px; "
                             "margin: 10px 0; "
                             "display: inline-block; "
                             "max-width: 100%; "
                             "box-sizing: border-box; "
-                            "float: left; "
-                            "margin-right: 15px; "
-                            "margin-bottom: 10px;"
                         )
                         
-                        # Add styling to image
-                        img['style'] = "max-width: 100%; height: auto; display: block; margin: 0;"
+                        # Add alignment-specific styles
+                        if alignment == 'right':
+                            container_style += (
+                                "float: right; "
+                                "margin-left: 15px; "
+                                "margin-bottom: 10px;"
+                            )
+                        elif alignment == 'center':
+                            container_style += (
+                                "float: none; "
+                                "margin: 10px auto; "
+                                "display: block; "
+                                "text-align: center;"
+                            )
+                        else:  # left alignment
+                            container_style += (
+                                "float: left; "
+                                "margin-right: 15px; "
+                                "margin-bottom: 10px;"
+                            )
                         
-                        # Wrap image in container
+                        container['style'] = container_style
+                        
+                        # Rest of the image handling remains the same
+                        img['style'] = "max-width: 100%; height: auto; display: block; margin: 0;"
                         img.wrap(container)
                         
-                        # Look specifically for WordPress caption
-                        caption = img.find_next('p', class_='wp-caption-text')
+                        # Caption handling with alignment
+                        caption = None
+                        if wp_caption:
+                            caption = wp_caption.find('p', class_='wp-caption-text')
                         if not caption:
-                            # Also look for caption by ID if class not found
+                            caption = img.find_next('p', class_='wp-caption-text')
+                        if not caption:
                             caption = img.find_next('p', id=lambda x: x and 'caption-attachment' in x)
                         
                         if caption:
-                            # Create new caption div inside container
                             caption_div = soup.new_tag('div')
-                            caption_div['style'] = "margin: 5px 0 0 0; text-align: center; font-style: italic;"
+                            caption_div['style'] = f"margin: 5px 0 0 0; text-align: {alignment}; font-style: italic;"
                             caption_div.string = caption.get_text()
                             container.append(caption_div)
+                            if wp_caption:
+                                wp_caption.unwrap()  # Remove the original wp-caption div
                             caption.decompose()  # Remove original caption
                     
                     except Exception as img_error:
