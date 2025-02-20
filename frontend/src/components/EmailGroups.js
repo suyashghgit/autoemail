@@ -118,6 +118,53 @@ const EmailGroups = () => {
     }
   };
 
+  const handleSendIndividualEmail = async (contact, sequenceId) => {
+    try {
+      // Get sequence data
+      const sequencesResponse = await axios.get(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/sequences`
+      );
+      const sequence = sequencesResponse.data.find(seq => seq.sequence_id === sequenceId);
+      
+      if (!sequence) {
+        throw new Error('Sequence not found');
+      }
+
+      // Send individual email
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL || 'http://localhost:8000'}/send`,
+        {
+          recipient: contact.email_address,
+          subject: sequence.email_subject,
+          body: `Dear ${contact.first_name},\n\n${sequence.email_body}`,
+          article_link: sequence.article_link,
+          contact_id: contact.user_id,
+          sequence_id: sequenceId
+        }
+      );
+
+      // Show success toast
+      toast.success('Email sent successfully', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#10B981',
+          color: 'white',
+        },
+      });
+    } catch (err) {
+      // Show error toast
+      toast.error(err.response?.data?.detail || 'Failed to send email', {
+        duration: 4000,
+        position: 'top-right',
+        style: {
+          background: '#EF4444',
+          color: 'white',
+        },
+      });
+    }
+  };
+
   const getGroupName = (sequenceId) => {
     if (sequenceId === 15) {
       return "Monthly Group";
@@ -194,6 +241,7 @@ const EmailGroups = () => {
                           <th className="p-3 text-left">Email</th>
                           <th className="p-3 text-left">Join Date</th>
                           <th className="p-3 text-left">Last Email</th>
+                          <th className="p-3 text-left">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -208,6 +256,14 @@ const EmailGroups = () => {
                             </td>
                             <td className="p-3">
                               {new Date(contact.last_email_sent_at).toLocaleDateString()}
+                            </td>
+                            <td className="p-3">
+                              <button
+                                onClick={() => handleSendIndividualEmail(contact, group.sequence_id)}
+                                className="bg-red-700 text-white px-3 py-1 rounded-lg hover:bg-red-800 transition-colors text-sm"
+                              >
+                                Send Email
+                              </button>
                             </td>
                           </tr>
                         ))}
