@@ -22,25 +22,23 @@ from config import Settings
 from dependencies import get_settings
 from googleapiclient.discovery import build
 import models
+from fastapi.responses import FileResponse
+import time
 
 router = APIRouter(
     tags=["email"]  # Remove the prefix
 )
 
 def get_template(template_name):
-    template_path = os.path.join("app", "templates", f"{template_name}.txt")
+    template_path = os.path.join("templates", f"{template_name}.txt")
     with open(template_path, "r") as file:
         return file.read()
 
 async def fetch_article_content(url: str) -> str:
     """Fetch and extract the main content from the article URL"""
-    # Handle empty or None URL
     if not url or not url.strip():
         return """
-        <div class='blog-content'>
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
-            </div>
+        <div class='blog-content' style='text-align: justify;'>
             <p>No article link provided.</p>
         </div>
         """
@@ -61,9 +59,8 @@ async def fetch_article_content(url: str) -> str:
             print(f"Response status code: {response.status_code}")  # Debug log
             
             if response.status_code != 200:
-                print(f"Failed to fetch content. Status code: {response.status_code}")
                 return f"""
-                <div class='blog-content'>
+                <div class='blog-content' style='text-align: justify;'>
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
                     </div>
@@ -96,10 +93,17 @@ async def fetch_article_content(url: str) -> str:
                 for iframe in article_content.find_all('iframe'):
                     iframe.decompose()
                 
+                # Add container styles to article_content
+                article_content['style'] = (
+                    "padding: 30px; "
+                    "border-radius: 5px; "
+                    "overflow: hidden;"  # This ensures floating images stay within
+                )
+                
                 # Add padding to the first paragraph
-                first_p = article_content.find('p')
-                if first_p:
-                    first_p['style'] = 'padding-left: 20px;'  # Add 20px left padding
+                first_p = article_content.find_all('p')
+                if first_p:  # Check if any paragraphs exist
+                    first_p[0]['style'] = 'padding: 0 20px; text-align: center;'  # Center alignment with padding
                 
                 # Keep all style tags and CSS classes
                 # Convert relative URLs to absolute URLs
@@ -117,39 +121,77 @@ async def fetch_article_content(url: str) -> str:
                             elif not src.startswith(('http://', 'https://')):
                                 img['src'] = f"{base_domain}/{src.lstrip('/')}"
                         
-                        # Create new container
+                        # Find parent wp-caption div if it exists
+                        wp_caption = img.find_parent('div', class_=lambda x: x and 'wp-caption' in x.split())
+                        
+                        # Determine alignment from wp-caption classes
+                        alignment = 'left'  # default
+                        if wp_caption:
+                            classes = wp_caption.get('class', [])
+                            if isinstance(classes, str):
+                                classes = classes.split()
+                            if 'alignright' in classes:
+                                alignment = 'right'
+                            elif 'aligncenter' in classes:
+                                alignment = 'center'
+                        
+                        # Create container with alignment-specific styles
                         container = soup.new_tag('div')
                         container['class'] = 'image-container'
-                        container['style'] = (
+                        
+                        # Base styles
+                        container_style = (
                             "border: 1px solid #ddd; "
                             "padding: 4px; "
                             "margin: 10px 0; "
                             "display: inline-block; "
                             "max-width: 100%; "
                             "box-sizing: border-box; "
-                            "float: left; "
-                            "margin-right: 15px; "
-                            "margin-bottom: 10px;"
                         )
                         
-                        # Add styling to image
-                        img['style'] = "max-width: 100%; height: auto; display: block; margin: 0;"
+                        # Add alignment-specific styles
+                        if alignment == 'right':
+                            container_style += (
+                                "float: right; "
+                                "margin-left: 15px; "
+                                "margin-bottom: 10px;"
+                            )
+                        elif alignment == 'center':
+                            container_style += (
+                                "float: none; "
+                                "margin: 10px auto; "
+                                "display: block; "
+                                "text-align: center;"
+                            )
+                        else:  # left alignment
+                            container_style += (
+                                "float: left; "
+                                "margin-right: 15px; "
+                                "margin-bottom: 10px;"
+                            )
                         
-                        # Wrap image in container
+                        container['style'] = container_style
+                        
+                        # Rest of the image handling remains the same
+                        img['style'] = "max-width: 100%; height: auto; display: block; margin: 0;"
                         img.wrap(container)
                         
-                        # Look specifically for WordPress caption
-                        caption = img.find_next('p', class_='wp-caption-text')
+                        # Caption handling with alignment
+                        caption = None
+                        if wp_caption:
+                            caption = wp_caption.find('p', class_='wp-caption-text')
                         if not caption:
-                            # Also look for caption by ID if class not found
+                            caption = img.find_next('p', class_='wp-caption-text')
+                        if not caption:
                             caption = img.find_next('p', id=lambda x: x and 'caption-attachment' in x)
                         
                         if caption:
-                            # Create new caption div inside container
                             caption_div = soup.new_tag('div')
-                            caption_div['style'] = "margin: 5px 0 0 0; text-align: center; font-style: italic;"
+                            caption_div['style'] = f"margin: 5px 0 0 0; text-align: {alignment}; font-style: italic;"
                             caption_div.string = caption.get_text()
                             container.append(caption_div)
+                            if wp_caption:
+                                wp_caption.unwrap()  # Remove the original wp-caption div
                             caption.decompose()  # Remove original caption
                     
                     except Exception as img_error:
@@ -162,19 +204,16 @@ async def fetch_article_content(url: str) -> str:
                 article_content.append(clear_div)
                 
                 # Preserve all original classes and styles
+                # Remove the logo from article_content
                 return f"""
-                    <div style="text-align: left; margin-bottom: 20px;">
-                        <img src="cid:logo" alt="US Observer Logo" style="width: 100%; height: auto;">
+                    <div style='text-align: justify;'>
+                        {str(article_content)}
                     </div>
-                    {str(article_content)}
                 """
             else:
                 print("No article content found with any selector")  # Debug log
                 return f"""
-                <div class='blog-content'>
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
-                    </div>
+                <div class='blog-content' style='text-align: justify;'>
                     <p>Unable to extract the article content. Please visit 
                     <a href="{url}">the article page</a> directly to read the full content.</p>
                 </div>
@@ -184,10 +223,7 @@ async def fetch_article_content(url: str) -> str:
         print(f"Error type: {type(e)}")  # Additional error info
         print(f"Error details: {e.__dict__}")  # More error details if available
         return f"""
-        <div class='blog-content'>
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
-            </div>
+        <div class='blog-content' style='text-align: justify;'>
             <p>The article content is temporarily unavailable (Error: {str(e)}). Please visit 
             <a href="{url}">the article page</a> directly to read the full content.</p>
         </div>
@@ -198,46 +234,41 @@ async def send_email(
     email: EmailSchema,
     request: Request,
     db: Session = Depends(get_db),
-    credentials: dict = Depends(get_credentials)
+    credentials: Credentials = Depends(get_authenticated_credentials)
 ):
+    message_id = f"{int(time.time())}_{email.contact_id}"
+    history_id = None
+    
     try:
-        # Get signature and disclaimer text
-        try:
-            signature = get_template("signature")
-            signature_bottom = get_template("signature_bottom")
-            disclaimer = get_template("disclaimer")
-        except FileNotFoundError as e:
-            print(f"Template error: {str(e)}")
-            signature = ""
-            signature_bottom = ""
-            disclaimer = ""
+        # Get templates
+        signature = get_template("signature")
+        signature_bottom = get_template("signature_bottom")
+        disclaimer = get_template("disclaimer")
         
-        # Get absolute path to logo file
-        logo_path = os.path.abspath(os.path.join("app", "templates", "logo.png"))
-        print(f"Logo path: {logo_path}")  # Debug print
-        
-        if not os.path.exists(logo_path):
-            print(f"Logo file not found at: {logo_path}")  # Debug print
-            raise FileNotFoundError(f"Logo file not found at: {logo_path}")
+        # Update the tracking URL to use absolute HTTPS URL
+        base_url = settings.BACKEND_URL.rstrip('/')
+        if not base_url.startswith('https://'):
+            base_url = f"https://{base_url.replace('http://', '')}"
+        tracking_url = f"{base_url}/track-open/{message_id}"
         
         # Fetch article content
         article_content = await fetch_article_content(str(email.article_link))
         
-        # Fixed message with dynamic link and embedded article
+        # Create email HTML with tracked logo (only one logo)
         fixed_message = f"""
-        <div style="margin: 20px 0;">
-            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><strong>Click <a href="{email.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong></p>
-        </div>
         <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" style="display: none;"/>
+                <a href="{email.article_link}">
+                    <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                </a>
+            </div>
             {article_content}
             {signature_bottom}
         </div>
         """
         
-        # The email body is now HTML from ReactQuill
-        email_body = email.body  # No need to wrap in div, it's already HTML
-        
-        # Combine message body with logo, signature and disclaimer in HTML format
+        # Combine all parts
         full_message = f"""
         <html>
             <head>
@@ -250,15 +281,17 @@ async def send_email(
                     }}
                     .email-body {{
                         margin-bottom: 1em;
+                        text-align: justify;
                     }}
                 </style>
             </head>
             <body>
                 <div class="email-body">
-                    {email_body}
+                    {email.body}
                 </div>
                 <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
                     {signature}
+                    <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><strong>Click <a href="{email.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong></p>
                 </div>
                 {fixed_message}
                 <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px;">
@@ -268,48 +301,65 @@ async def send_email(
         </html>
         """
         
+        # Send email and get response
         gmail_service = GmailService(credentials)
         message = gmail_service.create_message(
             to=email.recipient,
             subject=email.subject,
             message_text=full_message,
-            image_path=logo_path,
-            reply_to=settings.EMAIL_REPLY_TO
+            reply_to=settings.EMAIL_REPLY_TO,
+            image_path="templates/logo.png"
         )
         result = gmail_service.send_message(message)
         
-        # Record the email metric - UPDATED
+        # Extract history ID from response - add debug logging
+        print("Gmail API Response:", result)  # Debug log
+        history_id = result.get('historyId')
+        if not history_id and 'id' in result:
+            # Try alternate location in response
+            history_id = result['id']
+        
+        print(f"Extracted History ID: {history_id}")  # Debug log
+        
+        if not history_id:
+            print("Warning: No history ID returned from Gmail API")
+            print("Full Gmail response:", result)
+        
+        # Record the email metric
         metric = models.EmailMetric(
             contact_id=email.contact_id,
             sequence_id=email.sequence_id,
-            message_id=result.get("id"),
+            message_id=message_id,
+            history_id=str(history_id) if history_id else None,  # Convert to string
             status="delivered",
             sent_at=datetime.now()
         )
         db.add(metric)
         db.commit()
         
-        return {"message": "Email sent successfully", "message_id": result.get("id")}
-    except FileNotFoundError as e:
-        print(f"File error: {str(e)}")
-        raise HTTPException(
-            status_code=404,
-            detail=str(e)
-        )
-    except Exception as e:
-        # Record failed attempt - UPDATED
-        if 'email' in locals():
-            metric = models.EmailMetric(
-                contact_id=email.contact_id,
-                sequence_id=email.sequence_id,
-                message_id=None,
-                status="failed",
-                sent_at=datetime.now()
-            )
-            db.add(metric)
-            db.commit()
+        return {
+            "message": "Email sent successfully",
+            "message_id": message_id,
+            "history_id": history_id,
+            "gmail_response": result  # Include full response for debugging
+        }
         
-        print(f"Error sending email: {str(e)}")
+    except Exception as e:
+        print(f"Error sending email: {str(e)}")  # Debug log
+        print(f"Gmail service response (if any): {locals().get('result', 'No response')}")  # Debug log
+        
+        # Record failed attempt
+        metric = models.EmailMetric(
+            contact_id=email.contact_id,
+            sequence_id=email.sequence_id,
+            message_id=message_id,
+            history_id=str(history_id) if history_id else None,  # Convert to string
+            status="failed",
+            sent_at=datetime.now()
+        )
+        db.add(metric)
+        db.commit()
+        
         raise HTTPException(
             status_code=500,
             detail=f"Failed to send email: {str(e)}"
@@ -318,6 +368,7 @@ async def send_email(
 @router.post("/send-group")
 async def send_group_email(
     email_data: GroupEmailSchema,
+    request: Request,
     credentials: Credentials = Depends(get_authenticated_credentials),
     settings: Settings = Depends(get_settings),
     db: Session = Depends(get_db)
@@ -343,44 +394,41 @@ async def send_group_email(
         failed_sends = 0
 
         for contact in contacts:
+            message_id = f"{int(time.time())}_{contact.user_id}"
+            history_id = None
+            
             try:
-                # Get signature and disclaimer text
-                try:
-                    signature = get_template("signature")
-                    signature_bottom = get_template("signature_bottom")
-                    disclaimer = get_template("disclaimer")
-                except FileNotFoundError as e:
-                    print(f"Template error: {str(e)}")
-                    signature = ""
-                    signature_bottom = ""
-                    disclaimer = ""
+                # Get templates
+                signature = get_template("signature")
+                signature_bottom = get_template("signature_bottom")
+                disclaimer = get_template("disclaimer")
                 
-                # Get absolute path to logo file
-                logo_path = os.path.abspath(os.path.join("app", "templates", "logo.png"))
-                
-                if not os.path.exists(logo_path):
-                    raise FileNotFoundError(f"Logo file not found at: {logo_path}")
+                # Generate tracking URL for logo
+                base_url = settings.BACKEND_URL.rstrip('/')  # Assuming you have BACKEND_URL in settings
+                tracking_url = f"{base_url}/track-open/{message_id}"
                 
                 # Fetch article content
                 article_content = await fetch_article_content(str(sequence.article_link))
+                
+                # Create email HTML with tracked logo
+                fixed_message = f"""
+                <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="https://www.manrosecreation.com/api/bridal?message_id={message_id}" style="display: none;"    />
+                        <a href="{sequence.article_link}">
+                            <img src="cid:logo" alt="US Observer Logo" style="max-width: 100%; height: auto;">
+                        </a>
+                    </div>
+                    {article_content}
+                    {signature_bottom}
+                </div>
+                """
                 
                 # Use sequence email body and subject
                 email_body = f"Dear {contact.first_name},\n\n{sequence.email_body}"
                 email_subject = sequence.email_subject or "US Observer Update"
                 
                 # Create the full message
-                fixed_message = f"""
-                <div style="margin: 20px 0;">
-                    <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
-                        <strong>Click <a href="{sequence.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong>
-                    </p>
-                </div>
-                <div style="margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-                    {article_content}
-                    {signature_bottom}
-                </div>
-                """
-                
                 full_message = f"""
                 <html>
                     <head>
@@ -393,6 +441,7 @@ async def send_group_email(
                             }}
                             .email-body {{
                                 margin-bottom: 1em;
+                                text-align: justify;
                             }}
                         </style>
                     </head>
@@ -402,6 +451,8 @@ async def send_group_email(
                         </div>
                         <div style="font-family: Arial, sans-serif; font-size: 14px; color: #333;">
                             {signature}
+                            <p style="font-family: Arial, sans-serif; font-size: 14px; color: #333;"><strong>Click <a href="{sequence.article_link}" style="color: #0066cc; text-decoration: underline;">HERE</a> to read about us</strong></p>
+
                         </div>
                         {fixed_message}
                         <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 20px;">
@@ -411,21 +462,36 @@ async def send_group_email(
                 </html>
                 """
                 
+                # Send email and get response
                 gmail_service = GmailService(credentials)
                 message = gmail_service.create_message(
                     to=contact.email_address,
                     subject=email_subject,
                     message_text=full_message,
-                    image_path=logo_path,
-                    reply_to=settings.EMAIL_REPLY_TO
+                    reply_to=settings.EMAIL_REPLY_TO,
+                    image_path="templates/logo.png"
                 )
                 result = gmail_service.send_message(message)
+                
+                # Extract history ID from response - add debug logging
+                print(f"Gmail API Response for {contact.email_address}:", result)  # Debug log
+                history_id = result.get('historyId')
+                if not history_id and 'id' in result:
+                    # Try alternate location in response
+                    history_id = result['id']
+                
+                print(f"Extracted History ID for {contact.email_address}: {history_id}")  # Debug log
+                
+                if not history_id:
+                    print(f"Warning: No history ID returned for contact {contact.user_id}")
+                    print("Full Gmail response:", result)
                 
                 # Record successful email metric
                 metric = models.EmailMetric(
                     contact_id=contact.user_id,
                     sequence_id=email_data.sequence_id,
-                    message_id=result.get("id"),
+                    message_id=message_id,
+                    history_id=str(history_id) if history_id else None,  # Convert to string
                     status="delivered",
                     sent_at=datetime.now()
                 )
@@ -438,11 +504,14 @@ async def send_group_email(
 
             except Exception as e:
                 print(f"Failed to send email to {contact.email_address}: {str(e)}")
+                print(f"Gmail service response (if any): {locals().get('result', 'No response')}")  # Debug log
+                
                 # Record failed email metric
                 metric = models.EmailMetric(
                     contact_id=contact.user_id,
                     sequence_id=email_data.sequence_id,
-                    message_id=None,
+                    message_id=message_id,
+                    history_id=str(history_id) if history_id else None,  # Convert to string
                     status="failed",
                     sent_at=datetime.now()
                 )
@@ -520,12 +589,12 @@ def get_email_groups(db: Session = Depends(get_db)):
 
 @router.post("/schedule-group-emails")
 async def schedule_group_emails(
-    db: Session = Depends(get_db),
-    credentials: dict = Depends(get_credentials)
+    credentials: Credentials = Depends(get_authenticated_credentials),
+    settings: Settings = Depends(get_settings),
+    db: Session = Depends(get_db)
 ):
     """Send emails to all active groups in sequence"""
     try:
-        # Remove await for synchronous SQLAlchemy query
         active_sequences = db.query(models.SequenceMapping).filter(
             models.SequenceMapping.is_active == True,
             models.SequenceMapping.sequence_id.in_(list(range(1, 11)) + [15])
@@ -534,12 +603,12 @@ async def schedule_group_emails(
         results = []
         for sequence in active_sequences:
             try:
-                # Keep await here since send_group_email is async
                 result = await send_group_email(
-                    GroupEmailSchema(sequence_id=sequence.sequence_id),
-                    Request,
-                    db,
-                    credentials
+                    email_data=GroupEmailSchema(sequence_id=sequence.sequence_id),
+                    request=Request,
+                    credentials=credentials,
+                    settings=settings,
+                    db=db
                 )
                 results.append({
                     "sequence_id": sequence.sequence_id,
@@ -566,16 +635,76 @@ async def schedule_group_emails(
             detail=f"Failed to process scheduled group emails: {str(e)}"
         )
 
-# Function to send scheduled emails
+# Updated send_scheduled_emails function
 async def send_scheduled_emails():
     """Send emails to all active groups every Tuesday"""
     try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{settings.BACKEND_URL}/schedule-group-emails"
-            )
-            print("Response:", response.json())
-            return response
+        # Get credentials and settings
+        db = next(get_db())
+        settings = get_settings()
+        credentials = await get_authenticated_credentials(settings, db)
+        
+        # Make the direct function call instead of HTTP request
+        result = await schedule_group_emails(
+            credentials=credentials,
+            settings=settings,
+            db=db
+        )
+        print("Scheduled emails result:", result)
+        return result
     except Exception as e:
         print("Error sending scheduled emails:", str(e))
-        raise 
+        raise
+
+@router.get("/track-open/{message_id}")
+async def track_email_open(message_id: str, request: Request, db: Session = Depends(get_db)):
+    """Track email opens via logo loading"""
+    try:
+        # Log incoming request details for debugging
+        print(f"Tracking request received for message_id: {message_id}")
+        print(f"Request headers: {dict(request.headers)}")
+        print(f"Client IP: {request.client.host}")
+        
+        # Find the specific email metric with exact message_id match
+        metric = db.query(models.EmailMetric).filter(
+            models.EmailMetric.message_id == message_id,
+            models.EmailMetric.opened == False  # Only update if not already opened
+        ).first()
+        
+        if metric:
+            metric.opened_at = datetime.now()
+            metric.opened = True
+            db.commit()
+            print(f"Updated opened_at for message_id: {message_id}")
+        
+        # Return the logo image with specific headers for Gmail compatibility
+        logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
+        
+        headers = {
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET",
+            "Content-Type": "image/png",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": "inline",
+            "Accept-Ranges": "bytes"
+        }
+        
+        # return FileResponse(
+        #     path=logo_path,
+        #     media_type="image/png",
+        #     headers=headers,
+        #     filename="logo.png"
+        # )
+        
+    except Exception as e:
+        print(f"Error in track_email_open: {str(e)}")
+        # Even if tracking fails, return the image
+        logo_path = os.path.abspath(os.path.join("templates", "logo.png"))
+        # return FileResponse(
+        #     path=logo_path,
+        #     media_type="image/png",
+        #     headers={"Cache-Control": "no-cache"}
+        # )

@@ -34,25 +34,43 @@ async def get_client_secrets(db: Session):
     return json.loads(client_secrets.credentials_json)
 
 async def save_token(db: Session, credentials_dict: dict):
-    # Get the client_id from the credentials_dict
-    client_id = credentials_dict.get('client_id')
+    if not credentials_dict.get('refresh_token'):
+        print("Warning: No refresh token received. Ensure access_type='offline' and prompt='consent'.")
+        return
     
-    # Find existing token record for this client_id
+    # Update or create token record
     token_record = db.query(OAuthCredentials).filter(
-        OAuthCredentials.credential_type == "token",
-        OAuthCredentials.credentials_json.contains(client_id)  # This checks if the client_id exists in the JSON
+        OAuthCredentials.credential_type == "token"
     ).first()
     
     if token_record:
         # Update existing record
         token_record.credentials_json = json.dumps(credentials_dict)
     else:
-        # Create new record only if none exists
+        # Create new record
         token_record = OAuthCredentials(
             credential_type="token",
             credentials_json=json.dumps(credentials_dict)
         )
         db.add(token_record)
+    
+    # Update or create refresh token record
+    refresh_token_record = db.query(OAuthCredentials).filter(
+        OAuthCredentials.credential_type == "refresh_token"
+    ).first()
+    
+    refresh_token_dict = {"refresh_token": credentials_dict["refresh_token"]}
+    
+    if refresh_token_record:
+        # Update existing record
+        refresh_token_record.credentials_json = json.dumps(refresh_token_dict)
+    else:
+        # Create new record
+        refresh_token_record = OAuthCredentials(
+            credential_type="refresh_token",
+            credentials_json=json.dumps(refresh_token_dict)
+        )
+        db.add(refresh_token_record)
     
     db.commit()
     return token_record
@@ -73,7 +91,8 @@ async def gmail_auth(
         
         authorization_url, state = flow.authorization_url(
             access_type='offline',
-            include_granted_scopes='true'
+            include_granted_scopes='true',
+            prompt='consent'  # Forces Google to show the consent screen again
         )
         
         request.session["oauth_state"] = state
@@ -126,39 +145,68 @@ async def oauth2callback(
 
 async def get_valid_credentials(settings: Settings, db: Session = Depends(get_db)):
     try:
-        # Try to load existing credentials from database
+        # First try to get refresh token
+        refresh_token_record = db.query(OAuthCredentials).filter(
+            OAuthCredentials.credential_type == "refresh_token"
+        ).first()
+        
+        # Then get the token record
         token_record = db.query(OAuthCredentials).filter(
             OAuthCredentials.credential_type == "token"
         ).first()
         
-        print("Token record found:", bool(token_record))  # Debug log
-        
-        if not token_record:
-            print("No token record found in database")  # Debug log
+        if not refresh_token_record:
+            print("No refresh token found in database")
             return None
             
-        credentials_dict = json.loads(token_record.credentials_json)
+        try:
+            refresh_token_dict = json.loads(refresh_token_record.credentials_json)
+            refresh_token = refresh_token_dict.get('refresh_token')
+        except json.JSONDecodeError:
+            # If the refresh token is stored as plain text, try to use it directly
+            refresh_token = refresh_token_record.credentials_json.strip()
+            # Update the record to store it properly as JSON
+            refresh_token_record.credentials_json = json.dumps({"refresh_token": refresh_token})
+            db.commit()
         
+        if not refresh_token:
+            print("Invalid refresh token format in database")
+            return None
+            
+        # Get client secrets for refresh
+        client_secrets = await get_client_secrets(db)
+        
+        # If we have a token record, use its values
+        if token_record:
+            try:
+                credentials_dict = json.loads(token_record.credentials_json)
+                token = credentials_dict.get('token')
+                scopes = credentials_dict.get('scopes')
+            except json.JSONDecodeError:
+                print("Error parsing token record JSON")
+                token = None
+                scopes = settings.SCOPES
+        else:
+            token = None
+            scopes = settings.SCOPES  # Use default scopes from settings
+        
+        # Create credentials object
         credentials = Credentials(
-            token=credentials_dict['token'],
-            refresh_token=credentials_dict['refresh_token'],
-            token_uri=credentials_dict['token_uri'],
-            client_id=credentials_dict['client_id'],
-            client_secret=credentials_dict['client_secret'],
-            scopes=credentials_dict['scopes']
+            token=token,
+            refresh_token=refresh_token,
+            token_uri=client_secrets['web']['token_uri'],
+            client_id=client_secrets['web']['client_id'],
+            client_secret=client_secrets['web']['client_secret'],
+            scopes=scopes
         )
         
-        print("Credentials expired?", credentials.expired)  # Debug log
-        
-        # If credentials are expired, refresh them
-        if credentials.expired:
-            print("Attempting to refresh token")  # Debug log
-            request = GoogleRequest()  # Use renamed GoogleRequest
+        # Always try to refresh the token
+        if not credentials.valid:
+            request = GoogleRequest()
             credentials.refresh(request)
-            print("Token refreshed successfully")  # Debug log
             
-            # Update stored credentials
-            credentials_dict = {
+            # Update stored credentials after refresh
+            updated_credentials_dict = {
                 'token': credentials.token,
                 'refresh_token': credentials.refresh_token,
                 'token_uri': credentials.token_uri,
@@ -167,13 +215,13 @@ async def get_valid_credentials(settings: Settings, db: Session = Depends(get_db
                 'scopes': credentials.scopes,
                 'expiry': credentials.expiry.isoformat() if credentials.expiry else None
             }
-            await save_token(db, credentials_dict)
+            await save_token(db, updated_credentials_dict)
                 
         return credentials
     except Exception as e:
-        print(f"Error in get_valid_credentials: {str(e)}")  # Debug log
+        print(f"Error in get_valid_credentials: {str(e)}")
         import traceback
-        print(traceback.format_exc())  # Print full traceback
+        print(traceback.format_exc())
         return None
 
 @router.post("/login")
@@ -198,4 +246,29 @@ async def get_authenticated_credentials(
             detail="Not authenticated. Please authenticate with Gmail first.",
             headers={"WWW-Authenticate": "Bearer"}
         )
-    return credentials 
+    return credentials
+
+@router.post("/save-client-secrets")
+async def save_client_secrets(credentials_dict: dict, db: Session = Depends(get_db)):
+    """Endpoint to save or update client secrets"""
+    try:
+        # Check if client_secret record exists
+        client_secret_record = db.query(OAuthCredentials).filter(
+            OAuthCredentials.credential_type == "client_secret"
+        ).first()
+        
+        if client_secret_record:
+            # Update existing record
+            client_secret_record.credentials_json = json.dumps(credentials_dict)
+        else:
+            # Create new record
+            client_secret_record = OAuthCredentials(
+                credential_type="client_secret",
+                credentials_json=json.dumps(credentials_dict)
+            )
+            db.add(client_secret_record)
+        
+        db.commit()
+        return {"status": "success", "message": "Client secrets saved successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to save client secrets: {str(e)}") 

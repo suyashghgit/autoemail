@@ -168,3 +168,24 @@ docker run -d \
 ## License
 
 This project is proprietary and confidential.
+
+## Connect PG Admin to the database in docker
+Host name/address: localhost (not postgres or postgres-db)
+Port: 5432
+Maintenance database: local
+Username: suyashghimire
+Password: root
+
+## Setup postgres server local
+1. Install postgres server
+- brew install postgresql
+brew services start postgresql@14
+
+2. Create a database
+- createdb local
+
+3. Create a user
+- createuser --pwprompt suyashghimire
+
+4. import from sql dump
+- psql -U suyashghimire -d local -f postgres/pg_backup.sql

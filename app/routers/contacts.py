@@ -10,15 +10,16 @@ from services import PeopleService
 from dependencies import get_credentials, get_settings
 from google.oauth2.credentials import Credentials
 from config import Settings
+from routers.auth import get_authenticated_credentials
 
 router = APIRouter()
 
 @router.post("/contacts")
-def create_contact(
+async def create_contact(
     contact: ContactCreate, 
     request: Request,
     db: Session = Depends(get_db),
-    credentials: Credentials = Depends(get_credentials),
+    credentials: Credentials = Depends(get_authenticated_credentials),
     settings: Settings = Depends(get_settings)
 ):
     # Check if email already exists
@@ -142,16 +143,30 @@ def update_sequences(db: Session = Depends(get_db)):
         )
 
 @router.patch("/contacts/{contact_id}")
-def update_contact_notes(
+def update_contact(
     contact_id: int,
-    notes: dict,
+    update_data: dict,
     db: Session = Depends(get_db)
 ):
     contact = db.query(models.Contact).filter(models.Contact.user_id == contact_id).first()
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")
     
-    contact.notes = notes.get('notes')
+    # Handle notes update
+    if 'notes' in update_data:
+        contact.notes = update_data.get('notes')
+    
+    # Handle sequence update
+    if 'email_sequence' in update_data:
+        new_sequence = update_data.get('email_sequence')
+        # Validate sequence value
+        if new_sequence not in list(range(1, 11)) + [15]:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid sequence value. Must be 1-10 or 15."
+            )
+        contact.email_sequence = new_sequence
+    
     db.commit()
     db.refresh(contact)
     return contact 

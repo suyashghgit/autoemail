@@ -46,8 +46,11 @@ class EmailMetric(Base):
     )
     sequence_id = Column(Integer)
     message_id = Column(String)
+    history_id = Column(String, nullable=True)
     status = Column(String)
     sent_at = Column(DateTime, default=datetime.now)
+    opened_at = Column(DateTime, nullable=True)
+    opened = Column(Boolean, default=False)
     
     contact = relationship(
         "Contact",

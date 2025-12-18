@@ -20,21 +20,11 @@ class GmailService:
         # Add anti-spam headers
         message['Precedence'] = 'bulk'
         message['X-Auto-Response-Suppress'] = 'OOF, AutoReply'
-        
-        # Add a Message-ID header with your domain
         message['Date'] = formatdate(localtime=True)
 
-        # Create the HTML and alternative part
-        alt_part = MIMEMultipart('alternative')
-        message.attach(alt_part)
-
-        # Create both plain text and HTML versions
-        text_part = MIMEText(self.strip_html(message_text), 'plain')
+        # Create the HTML part first (not in alternative)
         html_part = MIMEText(message_text, 'html')
-
-        # Add both parts to the alternative part
-        alt_part.attach(text_part)
-        alt_part.attach(html_part)
+        message.attach(html_part)
 
         # Attach image if provided
         if image_path and os.path.exists(image_path):

@@ -216,7 +216,7 @@ const DashboardContent = () => {
                 <th className="px-6 py-3 text-left">Sequence</th>
                 <th className="px-6 py-3 text-left">Sent</th>
                 <th className="px-6 py-3 text-left">Delivery Rate</th>
-                <th className="px-6 py-3 text-left">Details</th>
+                <th className="px-6 py-3 text-left">Opened Rate</th>
               </tr>
             </thead>
             <tbody>
@@ -225,82 +225,194 @@ const DashboardContent = () => {
                   <React.Fragment key={metric.sequence_id}>
                     <tr className="border-b">
                       <td className="px-6 py-4">{metric.sequence_name}</td>
-                      <td className="px-6 py-4">{metric.total_sent}</td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
-                            <div
-                              className="bg-green-600 h-2.5 rounded-full"
-                              style={{ width: `${metric.delivery_rate}%` }}
-                            ></div>
-                          </div>
-                          {metric.delivery_rate}%
-                        </div>
+                        <button
+                          onClick={() => {
+                            const row = document.getElementById(`sent-details-${metric.sequence_id}`);
+                            if (row) {
+                              // If this detail row is already visible, just hide it
+                              if (!row.classList.contains('hidden')) {
+                                row.classList.add('hidden');
+                                return;
+                              }
+                              // Otherwise, hide all other details and show this one
+                              document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
+                                .forEach(el => el.classList.add('hidden'));
+                              row.classList.remove('hidden');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          {metric.total_sent}
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <button
                           onClick={() => {
-                            const row = document.getElementById(`details-${metric.sequence_id}`);
+                            const row = document.getElementById(`delivered-details-${metric.sequence_id}`);
                             if (row) {
-                              row.classList.toggle('hidden');
+                              // If this detail row is already visible, just hide it
+                              if (!row.classList.contains('hidden')) {
+                                row.classList.add('hidden');
+                                return;
+                              }
+                              // Otherwise, hide all other details and show this one
+                              document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
+                                .forEach(el => el.classList.add('hidden'));
+                              row.classList.remove('hidden');
                             }
                           }}
                           className="text-blue-600 hover:text-blue-800"
                         >
-                          View Details
+                          <div className="flex items-center">
+                            <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                              <div
+                                className="bg-green-600 h-2.5 rounded-full"
+                                style={{ width: `${metric.delivery_rate}%` }}
+                              ></div>
+                            </div>
+                            {metric.delivery_rate}%
+                          </div>
+                        </button>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => {
+                            const row = document.getElementById(`opened-details-${metric.sequence_id}`);
+                            if (row) {
+                              // If this detail row is already visible, just hide it
+                              if (!row.classList.contains('hidden')) {
+                                row.classList.add('hidden');
+                                return;
+                              }
+                              // Otherwise, hide all other details and show this one
+                              document.querySelectorAll('[id^="sent-details-"], [id^="delivered-details-"], [id^="opened-details-"]')
+                                .forEach(el => el.classList.add('hidden'));
+                              row.classList.remove('hidden');
+                            }
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <div className="flex items-center">
+                            <div className="w-24 bg-gray-200 rounded-full h-2.5 mr-2">
+                              <div
+                                className="bg-blue-600 h-2.5 rounded-full"
+                                style={{ width: `${metric.opened_rate}%` }}
+                              ></div>
+                            </div>
+                            {metric.opened_rate}%
+                          </div>
                         </button>
                       </td>
                     </tr>
-                    <tr id={`details-${metric.sequence_id}`} className="hidden bg-gray-50">
+                    
+                    {/* Total Sent Details */}
+                    <tr id={`sent-details-${metric.sequence_id}`} className="hidden bg-gray-50">
                       <td colSpan="4" className="px-6 py-4">
                         <div className="space-y-4">
-                          {/* Successful Deliveries */}
-                          <div>
-                            <h4 className="font-semibold text-green-700 mb-2">
-                              Successful Deliveries ({metric.successful_deliveries?.length || 0})
-                            </h4>
-                            {metric.successful_deliveries?.length > 0 ? (
-                              <div className="grid grid-cols-2 gap-4">
-                                {metric.successful_deliveries.map((delivery, index) => (
-                                  <div key={index} className="bg-green-50 p-3 rounded">
-                                    <p className="text-sm">
-                                      <span className="font-medium">To:</span> {delivery.recipient}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                      <span className="font-medium">Sent:</span> {new Date(delivery.sent_at).toLocaleString()}
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-sm text-gray-600">No successful deliveries</p>
-                            )}
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-semibold text-gray-700">Total Sent ({metric.total_sent})</h4>
+                            <button 
+                              onClick={() => {
+                                const row = document.getElementById(`sent-details-${metric.sequence_id}`);
+                                if (row) row.classList.add('hidden');
+                              }}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <span className="text-sm">Close ×</span>
+                            </button>
                           </div>
-
-                          {/* Failed Deliveries */}
-                          <div>
-                            <h4 className="font-semibold text-red-700 mb-2">
-                              Failed Deliveries ({metric.failed_deliveries?.length || 0})
-                            </h4>
-                            {metric.failed_deliveries?.length > 0 ? (
-                              <div className="grid grid-cols-2 gap-4">
-                                {metric.failed_deliveries.map((delivery, index) => (
-                                  <div key={index} className="bg-red-50 p-3 rounded">
-                                    <p className="text-sm">
-                                      <span className="font-medium">To:</span> {delivery.recipient}
-                                    </p>
-                                    <p className="text-sm text-gray-600">
-                                      <span className="font-medium">Attempted:</span> {new Date(delivery.attempted_at).toLocaleString()}
-                                    </p>
+                          <div className="grid grid-cols-2 gap-4">
+                            {[...metric.successful_deliveries, ...metric.failed_deliveries]
+                              .sort((a, b) => new Date(b.sent_at || b.attempted_at) - new Date(a.sent_at || a.attempted_at))
+                              .map((delivery, index) => (
+                                <div key={index} className={`p-3 rounded ${delivery.sent_at ? 'bg-green-50' : 'bg-red-50'}`}>
+                                  <p className="text-sm">
+                                    <span className="font-medium">To:</span> {delivery.recipient}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-medium">
+                                      {delivery.sent_at ? 'Sent:' : 'Attempted:'}
+                                    </span> {' '}
+                                    {new Date(delivery.sent_at || delivery.attempted_at).toLocaleString()}
+                                  </p>
+                                  {delivery.error_message && (
                                     <p className="text-sm text-red-600">
                                       <span className="font-medium">Error:</span> {delivery.error_message}
                                     </p>
-                                  </div>
-                                ))}
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Delivered Details */}
+                    <tr id={`delivered-details-${metric.sequence_id}`} className="hidden bg-gray-50">
+                      <td colSpan="4" className="px-6 py-4">
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-semibold text-green-700">
+                              Successful Deliveries ({metric.successful_deliveries.length})
+                            </h4>
+                            <button 
+                              onClick={() => {
+                                const row = document.getElementById(`delivered-details-${metric.sequence_id}`);
+                                if (row) row.classList.add('hidden');
+                              }}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <span className="text-sm">Close ×</span>
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            {metric.successful_deliveries.map((delivery, index) => (
+                              <div key={index} className="bg-green-50 p-3 rounded">
+                                <p className="text-sm">
+                                  <span className="font-medium">To:</span> {delivery.recipient}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  <span className="font-medium">Sent:</span> {new Date(delivery.sent_at).toLocaleString()}
+                                </p>
                               </div>
-                            ) : (
-                              <p className="text-sm text-gray-600">No failed deliveries</p>
-                            )}
+                            ))}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Opened Details */}
+                    <tr id={`opened-details-${metric.sequence_id}`} className="hidden bg-gray-50">
+                      <td colSpan="4" className="px-6 py-4">
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-semibold text-blue-700">
+                              Opened Emails ({metric.successful_deliveries.filter(d => d.opened).length})
+                            </h4>
+                            <button 
+                              onClick={() => {
+                                const row = document.getElementById(`opened-details-${metric.sequence_id}`);
+                                if (row) row.classList.add('hidden');
+                              }}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <span className="text-sm">Close ×</span>
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            {metric.successful_deliveries
+                              .filter(delivery => delivery.opened)
+                              .map((delivery, index) => (
+                                <div key={index} className="bg-blue-50 p-3 rounded">
+                                  <p className="text-sm">
+                                    <span className="font-medium">To:</span> {delivery.recipient}
+                                  </p>
+                                  <p className="text-sm text-gray-600">
+                                    <span className="font-medium">Sent:</span> {new Date(delivery.sent_at).toLocaleString()}
+                                  </p>
+                                </div>
+                              ))}
                           </div>
                         </div>
                       </td>
@@ -343,6 +455,7 @@ const ContactsSection = () => {
   const [sortField, setSortField] = useState('user_id');
   const [sortDirection, setSortDirection] = useState('asc');
   const [sequenceFilter, setSequenceFilter] = useState('all');
+  const [editingSequence, setEditingSequence] = useState(null);
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -453,6 +566,29 @@ const ContactsSection = () => {
     } catch (err) {
       toast.error('Failed to update notes');
       console.error('Failed to update notes:', err);
+    }
+  };
+
+  // Add this new function to handle sequence updates
+  const handleSequenceUpdate = async (contactId, newSequence) => {
+    try {
+      await axios.patch(
+        `${process.env.REACT_APP_API_URL}/contacts/${contactId}`,
+        { email_sequence: parseInt(newSequence) }
+      );
+      
+      // Update the contacts list with new sequence
+      setContacts(contacts.map(contact => 
+        contact.user_id === contactId 
+          ? { ...contact, email_sequence: parseInt(newSequence) }
+          : contact
+      ));
+      
+      setEditingSequence(null);
+      toast.success('Sequence updated successfully');
+    } catch (err) {
+      toast.error('Failed to update sequence');
+      console.error('Failed to update sequence:', err);
     }
   };
 
@@ -750,7 +886,7 @@ const ContactsSection = () => {
                 onClick={() => handleSort('user_id')}
               >
                 <div className="flex items-center">
-                  User ID
+                  ID
                   {sortField === 'user_id' && (
                     <span className="ml-1">
                       {sortDirection === 'asc' ? '↑' : '↓'}
@@ -840,20 +976,42 @@ const ContactsSection = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredContacts.map(contact => (
+            {filteredContacts.map((contact) => (
               <tr key={contact.user_id} className="border-b hover:bg-gray-50">
                 <td className="p-3">{contact.user_id}</td>
                 <td className="p-3">{`${contact.first_name} ${contact.last_name}`}</td>
                 <td className="p-3">{contact.email_address}</td>
-                <td className="p-3">{contact.company_name || '-'}</td>
-                <td className="p-3">{formatSequence(contact.email_sequence)}</td>
+                <td className="p-3">{contact.company_name || 'N/A'}</td>
+                <td className="p-3">
+                  {editingSequence === contact.user_id ? (
+                    <select
+                      value={contact.email_sequence}
+                      onChange={(e) => handleSequenceUpdate(contact.user_id, e.target.value)}
+                      onBlur={() => setEditingSequence(null)}
+                      autoFocus
+                      className="w-full p-2 border rounded focus:ring-2 focus:ring-red-500"
+                    >
+                      {[...Array(10)].map((_, i) => (
+                        <option key={i + 1} value={i + 1}>Week {i + 1}</option>
+                      ))}
+                      <option value="15">Monthly</option>
+                    </select>
+                  ) : (
+                    <div 
+                      onClick={() => setEditingSequence(contact.user_id)}
+                      className="cursor-pointer hover:bg-gray-100 p-1 rounded"
+                    >
+                      {formatSequence(contact.email_sequence)}
+                    </div>
+                  )}
+                </td>
                 <td className="p-3">
                   {contact.join_date ? new Date(contact.join_date).toLocaleDateString() : '-'}
                 </td>
                 <td className="p-3">
                   {contact.last_email_sent_at ? new Date(contact.last_email_sent_at).toLocaleDateString() : '-'}
                 </td>
-                <td className="p-3">
+                <td className="p-3 max-w-[300px]">
                   {editingNotes === contact.user_id ? (
                     <div className="flex flex-col space-y-2">
                       <textarea
@@ -888,9 +1046,11 @@ const ContactsSection = () => {
                         setNoteText(contact.notes || '');
                       }}
                     >
-                      <div className="min-h-[1.5rem] max-h-[4.5rem] overflow-hidden">
+                      <div className="min-h-[1.5rem] overflow-hidden">
                         {contact.notes ? (
-                          <p className="whitespace-pre-wrap">{contact.notes}</p>
+                          <p className="whitespace-pre-wrap break-words overflow-ellipsis line-clamp-3">
+                            {contact.notes}
+                          </p>
                         ) : (
                           <p className="text-gray-400 italic">Click to add notes</p>
                         )}
